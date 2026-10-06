@@ -120,7 +120,7 @@ def test_fresh_install_with_no_config_works(tmp_path):
         assert result["bodies"][url] == {"ok": False, "error": "WHMCS integration is disabled"}
     config = result["bodies"]["/api/config"]
     assert config["product"] == "Books" and config["company"] == "My Business"
-    assert config["features"] == {"whmcs": False, "margins": False}
+    assert config["features"] == {"whmcs": False, "margins": False, "business": True, "personal": True}
     assert [b["slug"] for b in config["businesses"]] == ["general"]
     assert config["whmcs_brands"] == [] and config["operating_account"] is None
     session = result["bodies"]["/api/session"]
@@ -411,7 +411,7 @@ def test_config_endpoint_with_whmcs_on(app_env):
 
     body = create_app().test_client().get("/api/config").get_json()
     assert body["product"] == "Example Books" and body["wordmark"] == "Example"
-    assert body["features"] == {"whmcs": True, "margins": True}
+    assert body["features"] == {"whmcs": True, "margins": True, "business": True, "personal": True}
     assert [b["slug"] for b in body["businesses"]] == ["branda", "consulting", "general"]
     assert body["businesses"][0]["tone"] == "brand" and body["businesses"][1]["tone"] == "violet"
     assert body["default_business"] == "general"
@@ -429,7 +429,7 @@ def test_whmcs_routes_404_when_disabled(app_env, whmcs_off):
         assert response.status_code == 404, url
         assert response.get_json() == {"ok": False, "error": "WHMCS integration is disabled"}
     body = client.get("/api/config").get_json()
-    assert body["features"] == {"whmcs": False, "margins": False} and body["whmcs_brands"] == []
+    assert body["features"] == {"whmcs": False, "margins": False, "business": True, "personal": True} and body["whmcs_brands"] == []
     for url in ("/api/dashboard", "/api/session", "/api/pnl", "/api/calendar"):
         assert client.get(url).status_code == 200, url
 
@@ -452,6 +452,39 @@ def test_whmcs_cli_disabled_message(app_env, whmcs_off, capsys):
     err = capsys.readouterr().err
     assert "WHMCS integration is disabled (set features.whmcs = true in config/local.toml)" in err
     assert "Traceback" not in err
+
+
+def test_business_and_personal_flags_default_on():
+    cfg = build({})
+    assert cfg.business_enabled and cfg.personal_enabled
+    off = build({"features": {"personal": False}})
+    assert off.business_enabled and not off.personal_enabled
+    assert off.public_payload(detail=False)["features"]["personal"] is False
+    with pytest.raises(ConfigError):
+        build({"features": {"business": False, "personal": False}})
+
+
+def test_personal_off_hides_cli_and_api(app_env, capsys):
+    from hpbooks.cli import main
+    from hpbooks.web import create_app
+
+    hpconfig.override(personal_enabled=False)
+    assert main(["personal", "dashboard"]) == 2
+    assert "personal mode is disabled" in capsys.readouterr().err
+    client = create_app().test_client()
+    assert client.get("/api/personal/status").status_code == 404
+    assert client.get("/api/config").get_json()["features"]["personal"] is False
+    assert client.get("/api/dashboard").status_code == 200
+
+
+def test_business_off_hides_business_cli(app_env, capsys):
+    from hpbooks.cli import main
+
+    hpconfig.override(business_enabled=False)
+    assert main(["pnl"]) == 2
+    assert main(["rules", "list"]) == 2
+    assert "business mode is disabled" in capsys.readouterr().err
+    assert main(["accounts", "list"]) == 0
 
 
 def test_example_config_documents_the_defaults():

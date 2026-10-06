@@ -124,7 +124,7 @@ _OPEN_API = frozenset(
 
 
 def _disabled_feature_route() -> str | None:
-    """The error for a WHMCS or margins route when that feature is off in the config."""
+    """The error for a WHMCS, margins, or personal route when that feature is off in the config."""
     path = request.path
     cfg = get_config()
     if not cfg.whmcs_enabled and (
@@ -133,6 +133,8 @@ def _disabled_feature_route() -> str | None:
         return "WHMCS integration is disabled"
     if not cfg.margins_enabled and (path == "/api/margins" or path.startswith("/api/margins/")):
         return "Server margins are disabled"
+    if not cfg.personal_enabled and (path == "/api/personal" or path.startswith(("/api/personal/", "/export/personal/"))):
+        return "Personal mode is disabled"
     return None
 
 

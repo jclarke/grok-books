@@ -1,6 +1,7 @@
+import { useConfig } from "../hooks/useConfig";
 import { useMode } from "../hooks/useMode";
 import { cx } from "../lib/cx";
-import type { Mode } from "../lib/mode";
+import { enabledModes, type Mode } from "../lib/mode";
 
 const OPTIONS: { value: Mode; label: string }[] = [
   { value: "business", label: "Business" },
@@ -10,13 +11,16 @@ const OPTIONS: { value: Mode; label: string }[] = [
 /**
  * Business | Personal switch. Not the brand switcher: that one picks a
  * business inside Business mode. The choice is kept in the URL and in
- * localStorage (hpbooks.mode) and the date range carries over.
+ * localStorage (hpbooks.mode) and the date range carries over. Hidden when
+ * the install has only one mode (features.business / features.personal).
  */
 export function ModeToggle({ compact }: { compact?: boolean }) {
   const { mode, switchMode } = useMode();
+  const modes = enabledModes(useConfig().features);
+  if (modes.length < 2) return null;
   return (
     <div className={cx("mode-toggle", compact && "mode-toggle--compact", `mode-toggle--${mode}`)} role="group" aria-label="Mode">
-      {OPTIONS.map((option) => (
+      {OPTIONS.filter((option) => modes.includes(option.value)).map((option) => (
         <button
           key={option.value}
           type="button"

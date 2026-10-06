@@ -225,7 +225,7 @@ describe("site config helpers", () => {
     const cfg = normalizeSiteConfig({}, { businesses: ["all", "alpha", "beta"] });
     expect(cfg.product).toBe("Books");
     expect(cfg.wordmark).toBe("Books");
-    expect(cfg.features).toEqual({ whmcs: false, margins: false });
+    expect(cfg.features).toEqual({ whmcs: false, margins: false, business: true, personal: true });
     expect(cfg.businesses.map((row) => [row.slug, row.label])).toEqual([
       ["alpha", "alpha"],
       ["beta", "beta"],
@@ -261,5 +261,34 @@ describe("sign-in", () => {
     expect(configCalls).toBeGreaterThan(1);
     const options = [...(screen.getAllByLabelText("Business")[0] as HTMLSelectElement).options].map((option) => option.textContent);
     expect(options).toEqual(["All businesses", "Brand A", "Consulting", "General"]);
+  });
+});
+
+describe("one-mode installs", () => {
+  it("personal off: no mode toggle, and /personal falls back to the business dashboard", async () => {
+    const calls = mockApi({ "GET /api/config": () => ({ ...fx.siteConfig, features: { ...fx.siteConfig.features, personal: false } }) });
+    renderApp("/personal");
+    await screen.findByText("Net margin");
+    expect(screen.queryByRole("group", { name: "Mode" })).toBeNull();
+    expect(calls.some((call) => call.path.startsWith("/api/personal"))).toBe(false);
+  });
+
+  it("business off: no mode toggle, and / goes to the personal dashboard", async () => {
+    const calls = mockApi({ "GET /api/config": () => ({ ...fx.siteConfig, features: { ...fx.siteConfig.features, business: false } }) });
+    renderApp("/");
+    await waitFor(() => expect(calls.some((call) => call.path.startsWith("/api/personal"))).toBe(true));
+    expect(screen.queryByRole("group", { name: "Mode" })).toBeNull();
+  });
+
+  it("both on: the toggle offers both modes", async () => {
+    mockApi({});
+    renderApp("/");
+    const toggles = await screen.findAllByRole("group", { name: "Mode" });
+    expect(within(toggles[0]).getAllByRole("button").map((button) => button.textContent)).toEqual(["Business", "Personal"]);
+  });
+
+  it("normalizes the mode flags; both off falls back to business", () => {
+    expect(normalizeSiteConfig({ features: { personal: false } }).features).toMatchObject({ business: true, personal: false });
+    expect(normalizeSiteConfig({ features: { business: false, personal: false } }).features).toMatchObject({ business: true, personal: false });
   });
 });

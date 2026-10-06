@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from hpbooks.config import WHMCS_DISABLED, get_config
+from hpbooks.config import BUSINESS_DISABLED, PERSONAL_DISABLED, WHMCS_DISABLED, get_config
 from hpbooks.db import short_id
 from hpbooks.db import HpbooksError, connect, init_db
 from hpbooks.reports import BUSINESS_FILTERS
@@ -26,9 +26,22 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
 
+# Commands that only make sense with business mode on. init, import, accounts, audit,
+# web, web-passphrase, personal, and update work in either mode.
+BUSINESS_COMMANDS = frozenset({
+    "seed-rules", "reclassify", "classify", "review", "pnl", "reconcile", "txns", "rules",
+    "transfers", "balances", "vendors", "seedcheck", "whmcs", "margins",
+    "import-capitalone", "verify-capitalone",
+})
+
+
 def _disabled_feature(cmd: str) -> str | None:
     """Message for a subcommand whose feature is off in the config, else None."""
     cfg = get_config()
+    if cmd == "personal" and not cfg.personal_enabled:
+        return PERSONAL_DISABLED
+    if cmd in BUSINESS_COMMANDS and not cfg.business_enabled:
+        return BUSINESS_DISABLED
     if cmd in ("whmcs", "margins") and not cfg.whmcs_enabled:
         return WHMCS_DISABLED
     if cmd == "margins" and not cfg.margins_enabled:
@@ -288,6 +301,10 @@ def build_parser() -> argparse.ArgumentParser:
     from hpbooks.personal.cli import add_parser as add_personal_parser
 
     add_personal_parser(sub)
+
+    from hpbooks.update import add_parser as add_update_parser
+
+    add_update_parser(sub)
 
     capone = sub.add_parser("import-capitalone", help="import a Capital One CSV export")
     capone.add_argument("csv")

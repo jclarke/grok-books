@@ -35,7 +35,7 @@ export const siteConfig: RawSiteConfig = {
   product: "Example Books",
   company: "Example Co",
   wordmark: "Example",
-  features: { whmcs: true, margins: true },
+  features: { whmcs: true, margins: true, business: true, personal: true },
   businesses: [
     { slug: "branda", label: "Brand A", kind: "brand", color: "#0d9488", color_dark: "#2dd4bf", tone: "brand", revenue_category: "Revenue - Hosting" },
     { slug: "consulting", label: "Consulting", kind: "consulting", color: "#4f46e5", color_dark: "#a5b4fc", tone: "violet", revenue_category: "Revenue - Consulting" },

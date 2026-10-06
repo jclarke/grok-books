@@ -153,6 +153,15 @@ class ImportersConfig:
 
 
 @dataclass(frozen=True)
+class UpdateConfig:
+    """Where `hpbooks update check|apply` looks. A git remote named `remote` wins; else `repo` on GitHub."""
+
+    repo: str = "jclarke/grok-books"
+    remote: str = "public"
+    branch: str = "main"
+
+
+@dataclass(frozen=True)
 class Config:
     source: str
     base_dir: Path
@@ -163,6 +172,8 @@ class Config:
     key_file: str | None = None
     whmcs_enabled: bool = False
     margins_enabled: bool = False
+    business_enabled: bool = True
+    personal_enabled: bool = True
     businesses: tuple[Business, ...] = ()
     revenue_categories: tuple[str, ...] = ()
     cogs_categories: tuple[str, ...] = ()
@@ -178,6 +189,7 @@ class Config:
     whmcs: WhmcsConfig = field(default_factory=WhmcsConfig)
     payer_hints: tuple[PayerHint, ...] = ()
     importers: ImportersConfig = field(default_factory=ImportersConfig)
+    update: UpdateConfig = field(default_factory=UpdateConfig)
 
     # --- derived -----------------------------------------------------------
 
@@ -257,7 +269,12 @@ class Config:
             "product": self.product_name,
             "company": self.company_name,
             "wordmark": self.wordmark,
-            "features": {"whmcs": self.whmcs_enabled, "margins": self.margins_enabled},
+            "features": {
+                "whmcs": self.whmcs_enabled,
+                "margins": self.margins_enabled,
+                "business": self.business_enabled,
+                "personal": self.personal_enabled,
+            },
         }
         if detail:
             out["businesses"] = [
@@ -515,6 +532,21 @@ def _importers(raw) -> ImportersConfig:
     )
 
 
+def _update(raw) -> UpdateConfig:
+    raw = raw or {}
+    if not isinstance(raw, dict):
+        raise ConfigError("update must be a table")
+    defaults = UpdateConfig()
+    out = UpdateConfig(
+        repo=_get(raw, "repo", str, defaults.repo, "update") or defaults.repo,
+        remote=_get(raw, "remote", str, defaults.remote, "update") or defaults.remote,
+        branch=_get(raw, "branch", str, defaults.branch, "update") or defaults.branch,
+    )
+    if out.repo.count("/") != 1 or not all(out.repo.split("/")):
+        raise ConfigError("update.repo must be owner/name")
+    return out
+
+
 def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None) -> Config:
     """A Config from parsed TOML (an empty dict gives the generic defaults)."""
     base_dir = base_dir or REPO_ROOT
@@ -528,6 +560,10 @@ def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None)
     product = _get(app, "product_name", str, "Books", "app")
     whmcs_on = _get(features, "whmcs", bool, False, "features")
     margins_on = _get(features, "margins", bool, whmcs_on, "features") and whmcs_on
+    business_on = _get(features, "business", bool, True, "features")
+    personal_on = _get(features, "personal", bool, True, "features")
+    if not business_on and not personal_on:
+        raise ConfigError("features.business and features.personal cannot both be false")
 
     revenue = _str_list(cats.get("revenue", DEFAULT_CATEGORIES["revenue"]), "categories.revenue")
     cogs = _str_list(cats.get("cogs", DEFAULT_CATEGORIES["cogs"]), "categories.cogs") if cats.get("cogs", DEFAULT_CATEGORIES["cogs"]) else ()
@@ -576,6 +612,8 @@ def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None)
         key_file=_path(_str_or_none(paths, "key_file", "paths")),
         whmcs_enabled=whmcs_on,
         margins_enabled=margins_on,
+        business_enabled=business_on,
+        personal_enabled=personal_on,
         businesses=businesses,
         revenue_categories=revenue,
         cogs_categories=cogs,
@@ -591,6 +629,7 @@ def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None)
         whmcs=whmcs,
         payer_hints=_payer_hints((data.get("payments", {}) or {}).get("payer_hints")),
         importers=_importers(data.get("importers")),
+        update=_update(data.get("update")),
     )
 
 
@@ -661,6 +700,8 @@ def margins_enabled() -> bool:
     return get_config().margins_enabled
 
 
+BUSINESS_DISABLED = "business mode is disabled (set features.business = true in config/local.toml)"
+PERSONAL_DISABLED = "personal mode is disabled (set features.personal = true in config/local.toml)"
 WHMCS_DISABLED = "WHMCS integration is disabled (set features.whmcs = true in config/local.toml)"
 
 

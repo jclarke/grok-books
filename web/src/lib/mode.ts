@@ -12,6 +12,20 @@ export function isMode(value: unknown): value is Mode {
   return value === "business" || value === "personal";
 }
 
+/** The modes this install has (features.business / features.personal), business first. */
+export function enabledModes(features: { business?: boolean; personal?: boolean }): Mode[] {
+  const modes: Mode[] = [];
+  if (features.business !== false) modes.push("business");
+  if (features.personal !== false) modes.push("personal");
+  return modes.length ? modes : ["business"];
+}
+
+/** `mode` when this install has it, else the mode it does have. */
+export function allowedMode(mode: Mode, features: { business?: boolean; personal?: boolean }): Mode {
+  const modes = enabledModes(features);
+  return modes.includes(mode) ? mode : modes[0];
+}
+
 export function modeFromPath(pathname: string): Mode {
   return pathname === PERSONAL_ROOT || pathname.startsWith(`${PERSONAL_ROOT}/`) ? "personal" : "business";
 }

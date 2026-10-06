@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { counterpartPath, counterpartSearch, isMode, modeFromPath, readStoredMode, storeMode } from "./lib/mode";
+import { allowedMode, counterpartPath, counterpartSearch, isMode, modeFromPath, readStoredMode, storeMode } from "./lib/mode";
 import { ApiError } from "./api/client";
 import { sessionKey } from "./hooks/useSession";
 import { useConfig } from "./hooks/useConfig";
@@ -89,16 +89,22 @@ function PnlRedirect() {
  * Applies the mode on load: ?mode= wins; with no ?mode= on the root page, the
  * remembered mode (localStorage hpbooks.mode) decides; the default is business.
  * Afterwards the path is the mode, and it is remembered on every change.
+ * A mode the install does not have (features.business / features.personal)
+ * sends you to the matching page of the other mode.
  */
 export function ModeGate({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const { features } = useConfig();
   const first = useRef(true);
   const urlMode = new URLSearchParams(location.search).get("mode");
   const pathMode = modeFromPath(location.pathname);
+  const onlyMode = allowedMode(pathMode, features);
   let target: string | null = null;
-  if (isMode(urlMode) && urlMode !== pathMode) {
+  if (onlyMode !== pathMode) {
+    target = `${counterpartPath(location.pathname, onlyMode)}${counterpartSearch(location.search, onlyMode)}`;
+  } else if (isMode(urlMode) && urlMode !== pathMode && allowedMode(urlMode, features) === urlMode) {
     target = `${counterpartPath(location.pathname, urlMode)}${counterpartSearch(location.search, urlMode)}`;
-  } else if (first.current && !isMode(urlMode) && location.pathname === "/" && readStoredMode() === "personal") {
+  } else if (first.current && !isMode(urlMode) && location.pathname === "/" && readStoredMode() === "personal" && allowedMode("personal", features) === "personal") {
     target = `/personal${counterpartSearch(location.search, "personal")}`;
   }
   useEffect(() => {

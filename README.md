@@ -87,6 +87,24 @@ You can also edit `data/allowed-hosts` directly (one host per line, mode 600). E
 
 Set `whmcs = true` under `[features]` and fill in `[whmcs]` and one `[[whmcs.brands]]` per install in `config/local.toml`, put the read-only MySQL password in `data/whmcs.secret` (mode 600), then `bin/hpbooks whmcs sync`. Setup, grants, and report definitions: [docs/whmcs.md](docs/whmcs.md).
 
+## Updates
+
+Installs follow the public snapshot repository (`[update]` in the config: `repo`, `remote`, `branch`; defaults `jclarke/grok-books`, `public`, `main`). A git remote with the `remote` name is used when the clone has one; otherwise the repository URL.
+
+```bash
+git remote add public https://github.com/jclarke/grok-books.git   # once, if the clone lacks it
+bin/hpbooks update check          # exit 0 up to date, 1 update available, 2 error
+bin/hpbooks update apply          # dry run: lists the new commits, changes nothing
+bin/hpbooks update apply --yes    # git fetch + git merge --ff-only
+bin/hpbooks-web stop && bin/hpbooks-web start   # load the new code
+```
+
+What is preserved: everything git ignores, which an update never writes: `config/local.toml`, `config/*.local.*`, `data/` (the database, key, logs, allowlist), keys and secrets, `.venv`, `sync/inbox/`, and exports. `apply` refuses when tracked files have uncommitted changes, when your clone has commits of its own (it only fast-forwards), or when upstream would change a protected path. The built UI in `hpbooks/static/app` arrives with the update; `--build-ui` also runs `bin/build-ui --no-install` when `web/` changed. If `requirements.txt` changed, run `.venv/bin/pip install -r requirements.txt`.
+
+An install unpacked from a zip (no `.git`) is checked through the GitHub API (`gh` when installed, else `GITHUB_TOKEN` if set) against the revision in `.hpbooks-revision`; `apply --yes` downloads the branch and overlays it, skipping the same protected paths. Files deleted upstream are not removed from a zip install.
+
+To be told about updates, see [docs/update-routine.md](docs/update-routine.md).
+
 ## Tests
 
 ```bash
@@ -116,6 +134,7 @@ If an assistant (Claude Code or similar) sets this up for you, give it this chec
 - [docs/importers.md](docs/importers.md): every import path
 - [docs/personal-mode.md](docs/personal-mode.md), [docs/balances-vendors.md](docs/balances-vendors.md), [docs/manual-balances.md](docs/manual-balances.md), [docs/payment-tracking.md](docs/payment-tracking.md)
 - [docs/whmcs.md](docs/whmcs.md): the optional billing integration
+- [docs/update-routine.md](docs/update-routine.md): a daily update check that only speaks up when there is one
 - [SECURITY.md](SECURITY.md): threat model and protections
 - [web/README.md](web/README.md): front-end code and dev server
 

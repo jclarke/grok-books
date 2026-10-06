@@ -36,6 +36,9 @@ export interface BankSide {
 export interface SiteFeatures {
   whmcs: boolean;
   margins: boolean;
+  /** Business / personal mode installed (features.business / features.personal). At least one is on. */
+  business: boolean;
+  personal: boolean;
 }
 
 export interface SiteConfig {
@@ -93,9 +96,13 @@ export function normalizeSiteConfig(raw: RawSiteConfig | null | undefined, sessi
   const cfg: RawSiteConfig = raw && typeof raw === "object" ? raw : {};
   const product = str(cfg.product, "Books");
   const wordmark = str(cfg.wordmark, product);
+  const personal = cfg.features?.personal !== false;
   const features: SiteFeatures = {
     whmcs: cfg.features?.whmcs === true,
     margins: cfg.features?.whmcs === true && cfg.features?.margins === true,
+    // Both off is rejected by the server; if it ever arrives, business wins.
+    business: cfg.features?.business !== false || !personal,
+    personal,
   };
 
   let businesses: BusinessConfig[] = [];

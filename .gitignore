@@ -19,6 +19,9 @@ id_rsa*
 config/local.toml
 config/*.local.*
 
+# Revision marker written by `hpbooks update apply` on zip installs
+.hpbooks-revision
+
 # Tooling
 .venv
 .venv/
