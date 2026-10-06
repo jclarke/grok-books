@@ -1,0 +1,7 @@
+# Allowlist for scripts/privacy_scan.sh. Keep it short; fix findings at the source instead.
+# Each non-comment line is a Python regex matched against the text around a finding
+# (the finding is suppressed when it matches), or `file:<glob>` to allow an image/PDF file.
+# Every entry needs a comment saying why it is a false positive. No personal terms here.
+
+# A public US grocery chain in the generic personal "Groceries" starter rule.
+TRADER JOE

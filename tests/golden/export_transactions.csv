@@ -1,0 +1,202 @@
+status=200
+date,id,account,amount,name,merchant,tag,category,source,note,status
+2026-09-29,g-rew-pending-1,Sample Rewards 0303,-18.00,ZZZ COFFEE CART,,needs_review,Uncategorized,agent,no matching rule,active
+2026-09-28,g-bank-posted-1,Example Bank Checking 0101,-42.00,ZZZ PENDING SHOP,,needs_review,Uncategorized,agent,no matching rule,active
+2026-09-28,g-bank-fee-9,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-09-26,g-card-pay-9,Sample Card 0404 (history from 2026-07-02),75.00,SAMPLE CARD ONLINE PYMT,,transfer,Transfer,rule,card payment received,active
+2026-09-25,g-bank-cardpay-9,Example Bank Checking 0101,-75.00,SAMPLE CARD DES:ONLINE PMT ID:1,,transfer,Transfer,agent,matched to cash card payment g-card-pay-9,active
+2026-09-23,g-chg-pay-9,Charge Card 0505,263.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-09-22,g-rew-pay-9,Sample Rewards 0303,399.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-09-21,g-bank-chgpay-9,Example Bank Checking 0101,-263.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-09-20,g-bank-rewpay-9,Example Bank Checking 0101,-399.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-09-17,g-bank-mystery-9,Example Bank Checking 0101,-87.45,ZZZ MYSTERY VENDOR,,consulting,Office/Other,manual,,active
+2026-09-15,g-bank-payroll-9,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-09-14,g-chg-mart-9,Charge Card 0505,-39.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-09-12,g-pp-out-9,PayPal Business,-159.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-09-12,g-bank-ppin-9,Example Bank Checking 0101,159.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-09-11,g-chg-ai-9,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-09-10,g-bank-draw-9,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-09-09,g-rew-cert-9,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-09-08,g-card-host-9,Sample Card 0404 (history from 2026-07-02),-75.00,FAKE HOSTING CO,Fake Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-09-07,g-pp-pay-9,PayPal Business,89.00,Payment from Customer 9,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-09-07,g-pp-fee-9,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-09-06,g-rew-books-9,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-09-05,g-bank-client-9,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-09-04,g-bank-pfee-9,Example Bank Checking 0101,-49.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-09-03,g-bank-proc-9,Example Bank Checking 0101,2433.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-09-02,g-rew-acme-9,Sample Rewards 0303,-129.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-09-01,g-bank-mortgage-9,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-08-28,g-bank-fee-8,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-08-26,g-card-pay-8,Sample Card 0404 (history from 2026-07-02),75.00,SAMPLE CARD ONLINE PYMT,,transfer,Transfer,rule,card payment received,active
+2026-08-25,g-bank-cardpay-8,Example Bank Checking 0101,-75.00,SAMPLE CARD DES:ONLINE PMT ID:1,,transfer,Transfer,agent,matched to cash card payment g-card-pay-8,active
+2026-08-23,g-chg-pay-8,Charge Card 0505,256.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-08-22,g-rew-pay-8,Sample Rewards 0303,388.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-08-21,g-bank-chgpay-8,Example Bank Checking 0101,-256.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-08-20,g-bank-rewpay-8,Example Bank Checking 0101,-388.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-08-17,g-bank-mystery-8,Example Bank Checking 0101,-84.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-08-15,g-bank-payroll-8,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-08-14,g-chg-mart-8,Charge Card 0505,-38.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-08-12,g-pp-out-8,PayPal Business,-158.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-08-12,g-bank-ppin-8,Example Bank Checking 0101,158.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-08-11,g-chg-ai-8,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-08-10,g-bank-draw-8,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-08-09,g-rew-cert-8,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-08-08,g-card-host-8,Sample Card 0404 (history from 2026-07-02),-75.00,FAKE HOSTING CO,Fake Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-08-07,g-pp-pay-8,PayPal Business,88.00,Payment from Customer 8,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-08-07,g-pp-fee-8,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-08-06,g-rew-books-8,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-08-05,g-bank-client-8,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-08-04,g-bank-pfee-8,Example Bank Checking 0101,-48.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-08-03,g-bank-proc-8,Example Bank Checking 0101,2396.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-08-02,g-rew-acme-8,Sample Rewards 0303,-128.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-08-01,g-bank-mortgage-8,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-07-28,g-bank-fee-7,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-07-26,g-card-pay-7,Sample Card 0404 (history from 2026-07-02),75.00,SAMPLE CARD ONLINE PYMT,,transfer,Transfer,rule,card payment received,active
+2026-07-25,g-bank-cardpay-7,Example Bank Checking 0101,-75.00,SAMPLE CARD DES:ONLINE PMT ID:1,,transfer,Transfer,agent,matched to cash card payment g-card-pay-7,active
+2026-07-23,g-chg-pay-7,Charge Card 0505,249.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-07-22,g-rew-pay-7,Sample Rewards 0303,377.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-07-21,g-bank-chgpay-7,Example Bank Checking 0101,-249.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-07-20,g-bank-rewpay-7,Example Bank Checking 0101,-377.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-07-17,g-bank-mystery-7,Example Bank Checking 0101,-81.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-07-15,g-bank-payroll-7,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-07-14,g-chg-mart-7,Charge Card 0505,-37.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-07-12,g-pp-out-7,PayPal Business,-157.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-07-12,g-bank-ppin-7,Example Bank Checking 0101,157.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-07-11,g-chg-ai-7,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-07-10,g-bank-draw-7,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-07-09,g-rew-cert-7,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-07-08,g-card-host-7,Sample Card 0404 (history from 2026-07-02),-75.00,FAKE HOSTING CO,Fake Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-07-07,g-pp-pay-7,PayPal Business,87.00,Payment from Customer 7,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-07-07,g-pp-fee-7,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-07-06,g-rew-books-7,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-07-05,g-bank-client-7,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-07-04,g-bank-pfee-7,Example Bank Checking 0101,-47.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-07-03,g-bank-proc-7,Example Bank Checking 0101,2359.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-07-02,g-rew-acme-7,Sample Rewards 0303,-127.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-07-01,g-bank-mortgage-7,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-06-28,g-bank-fee-6,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-06-23,g-chg-pay-6,Charge Card 0505,242.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-06-22,g-rew-pay-6,Sample Rewards 0303,366.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-06-21,g-bank-chgpay-6,Example Bank Checking 0101,-242.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-06-20,g-bank-rewpay-6,Example Bank Checking 0101,-366.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-06-17,g-bank-mystery-6,Example Bank Checking 0101,-78.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-06-15,g-bank-payroll-6,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-06-14,g-chg-mart-6,Charge Card 0505,-36.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-06-12,g-pp-out-6,PayPal Business,-156.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-06-12,g-bank-ppin-6,Example Bank Checking 0101,156.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-06-11,g-chg-ai-6,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-06-10,g-bank-draw-6,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-06-09,g-rew-cert-6,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-06-07,g-pp-pay-6,PayPal Business,86.00,Payment from Customer 6,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-06-07,g-pp-fee-6,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-06-06,g-rew-books-6,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-06-05,g-bank-client-6,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-06-04,g-bank-pfee-6,Example Bank Checking 0101,-46.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-06-03,g-bank-proc-6,Example Bank Checking 0101,2322.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-06-02,g-rew-acme-6,Sample Rewards 0303,-126.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-06-01,g-bank-mortgage-6,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-05-28,g-bank-fee-5,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-05-23,g-chg-pay-5,Charge Card 0505,235.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-05-22,g-rew-pay-5,Sample Rewards 0303,355.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-05-21,g-bank-chgpay-5,Example Bank Checking 0101,-235.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-05-20,g-bank-rewpay-5,Example Bank Checking 0101,-355.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-05-17,g-bank-mystery-5,Example Bank Checking 0101,-75.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-05-15,g-bank-payroll-5,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-05-14,g-chg-mart-5,Charge Card 0505,-35.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-05-12,g-pp-out-5,PayPal Business,-155.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-05-12,g-bank-ppin-5,Example Bank Checking 0101,155.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-05-11,g-chg-ai-5,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-05-10,g-bank-draw-5,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-05-09,g-rew-cert-5,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-05-07,g-pp-pay-5,PayPal Business,85.00,Payment from Customer 5,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-05-07,g-pp-fee-5,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-05-06,g-rew-books-5,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-05-05,g-bank-client-5,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-05-04,g-bank-pfee-5,Example Bank Checking 0101,-45.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-05-03,g-bank-proc-5,Example Bank Checking 0101,2285.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-05-02,g-rew-acme-5,Sample Rewards 0303,-125.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-05-01,g-bank-mortgage-5,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-04-28,g-bank-fee-4,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-04-23,g-chg-pay-4,Charge Card 0505,228.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-04-22,g-rew-pay-4,Sample Rewards 0303,344.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-04-21,g-bank-chgpay-4,Example Bank Checking 0101,-228.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-04-20,g-bank-rewpay-4,Example Bank Checking 0101,-344.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-04-17,g-bank-mystery-4,Example Bank Checking 0101,-72.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-04-15,g-bank-payroll-4,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-04-14,g-chg-mart-4,Charge Card 0505,-34.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-04-12,g-pp-out-4,PayPal Business,-154.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-04-12,g-bank-ppin-4,Example Bank Checking 0101,154.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-04-11,g-chg-ai-4,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-04-10,g-bank-draw-4,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-04-09,g-rew-cert-4,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-04-07,g-pp-pay-4,PayPal Business,84.00,Payment from Customer 4,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-04-07,g-pp-fee-4,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-04-06,g-rew-books-4,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-04-05,g-bank-client-4,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-04-04,g-bank-pfee-4,Example Bank Checking 0101,-44.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-04-03,g-bank-proc-4,Example Bank Checking 0101,2248.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-04-02,g-rew-acme-4,Sample Rewards 0303,-124.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-04-01,g-bank-mortgage-4,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-03-28,g-bank-fee-3,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-03-23,g-chg-pay-3,Charge Card 0505,221.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-03-22,g-rew-pay-3,Sample Rewards 0303,333.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-03-21,g-bank-chgpay-3,Example Bank Checking 0101,-221.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-03-20,g-bank-rewpay-3,Example Bank Checking 0101,-333.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-03-17,g-bank-mystery-3,Example Bank Checking 0101,-69.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-03-15,g-bank-payroll-3,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-03-14,g-chg-mart-3,Charge Card 0505,-33.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-03-12,g-pp-out-3,PayPal Business,-153.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-03-12,g-bank-ppin-3,Example Bank Checking 0101,153.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-03-11,g-chg-ai-3,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-03-10,g-bank-draw-3,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-03-09,g-rew-cert-3,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-03-07,g-pp-pay-3,PayPal Business,83.00,Payment from Customer 3,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-03-07,g-pp-fee-3,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-03-06,g-rew-books-3,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-03-05,g-bank-client-3,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-03-04,g-bank-pfee-3,Example Bank Checking 0101,-43.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-03-03,g-bank-proc-3,Example Bank Checking 0101,2211.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-03-02,g-rew-acme-3,Sample Rewards 0303,-123.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-03-01,g-bank-mortgage-3,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-02-28,g-bank-fee-2,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-02-23,g-chg-pay-2,Charge Card 0505,214.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-02-22,g-rew-pay-2,Sample Rewards 0303,322.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-02-21,g-bank-chgpay-2,Example Bank Checking 0101,-214.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-02-20,g-bank-rewpay-2,Example Bank Checking 0101,-322.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-02-17,g-bank-mystery-2,Example Bank Checking 0101,-66.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-02-15,g-bank-payroll-2,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-02-14,g-chg-mart-2,Charge Card 0505,-32.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-02-12,g-pp-out-2,PayPal Business,-152.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-02-12,g-bank-ppin-2,Example Bank Checking 0101,152.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-02-11,g-chg-ai-2,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-02-10,g-bank-draw-2,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-02-09,g-rew-cert-2,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-02-07,g-pp-pay-2,PayPal Business,82.00,Payment from Customer 2,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-02-07,g-pp-fee-2,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-02-06,g-rew-books-2,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-02-05,g-bank-client-2,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-02-04,g-bank-pfee-2,Example Bank Checking 0101,-42.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-02-03,g-bank-proc-2,Example Bank Checking 0101,2174.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-02-02,g-rew-acme-2,Sample Rewards 0303,-122.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-02-01,g-bank-mortgage-2,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active
+2026-01-28,g-bank-fee-1,Example Bank Checking 0101,-16.00,Monthly Maintenance Fee,,general,Bank & Card Fees,rule,bank monthly fee,active
+2026-01-23,g-chg-pay-1,Charge Card 0505,207.00,ONLINE PAYMENT - THANK YOU,,transfer,Transfer,rule,charge card payment received,active
+2026-01-22,g-rew-pay-1,Sample Rewards 0303,311.00,Payment Thank You-Mobile,,transfer,Transfer,rule,rewards card payment received,active
+2026-01-21,g-bank-chgpay-1,Example Bank Checking 0101,-207.00,CHARGE CARD CO DES:ACH PMT ID:6,,transfer,Transfer,rule,charge card payment from checking,active
+2026-01-20,g-bank-rewpay-1,Example Bank Checking 0101,-311.00,SAMPLE REWARDS DES:EPAY ID:5,,transfer,Transfer,rule,rewards card payment from checking,active
+2026-01-17,g-bank-mystery-1,Example Bank Checking 0101,-63.45,ZZZ MYSTERY VENDOR,,general,Office/Other,manual,,active
+2026-01-15,g-bank-payroll-1,Example Bank Checking 0101,-1500.00,WIDGET PAYROLL DES:PAYROLL ID:77,,general,Payroll,rule,payroll provider,active
+2026-01-14,g-chg-mart-1,Charge Card 0505,-31.10,FAKE MART #123,Fake Mart,owner_draw,Owner Draw,rule,groceries,active
+2026-01-12,g-pp-out-1,PayPal Business,-151.00,Money Transfer to Bank,,transfer,Transfer,rule,PayPal transfer out to checking,active
+2026-01-12,g-bank-ppin-1,Example Bank Checking 0101,151.00,PAYPAL DES:TRANSFER ID:8,,transfer,Transfer,rule,PayPal transfer into checking,active
+2026-01-11,g-chg-ai-1,Charge Card 0505,-20.00,FAKE AI TOOLS INC,Fake AI,general,AI Tools,manual,,active
+2026-01-10,g-bank-draw-1,Example Bank Checking 0101,-2500.00,Online Banking transfer to CHK 0000 Confirmation# 1,,owner_draw,Owner Draw,rule,transfer to personal checking,active
+2026-01-09,g-rew-cert-1,Sample Rewards 0303,-24.99,SAMPLE CERTS INC,Sample Certs,branda,Domains/DNS/SSL,rule,certificates,active
+2026-01-07,g-pp-pay-1,PayPal Business,81.00,Payment from Customer 1,,branda,Revenue - Hosting,rule,PayPal customer payment,active
+2026-01-07,g-pp-fee-1,PayPal Business,-3.10,PayPal Fee,,branda,Payment Processing Fees,rule,PayPal fee,active
+2026-01-06,g-rew-books-1,Sample Rewards 0303,-90.00,WIDGET CLOUD *BOOKS ONLINE,,general,Software & Licenses,rule,bookkeeping software,active
+2026-01-05,g-bank-client-1,Example Bank Checking 0101,4000.00,SAMPLE CLIENT LLC DES:PAYMENTS ID:9,,consulting,Revenue - Consulting,rule,consulting client payment,active
+2026-01-04,g-bank-pfee-1,Example Bank Checking 0101,-41.20,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,,branda,Payment Processing Fees,rule,card processor fee / hold,active
+2026-01-03,g-bank-proc-1,Example Bank Checking 0101,2137.15,EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001,,branda,Revenue - Hosting,rule,card processor deposit,active
+2026-01-02,g-rew-acme-1,Sample Rewards 0303,-121.00,ACME HOSTING HOLDINGS,Acme Hosting,branda,Hosting & Infrastructure,manual,,active
+2026-01-01,g-bank-mortgage-1,Example Bank Checking 0101,-2100.00,FAKE MORTGAGE SERVICER DES:MTG PYMT,,owner_draw,Owner Draw,manual,,active

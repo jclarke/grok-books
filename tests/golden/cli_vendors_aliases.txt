@@ -1,0 +1,6 @@
+exit=0
+--- stdout
+alias                  canonical     by               created
+---------------------  ------------  ---  -------------------
+ACME HOSTING HOLDINGS  Acme Hosting  cli  2026-09-30T12:00:00
+--- stderr

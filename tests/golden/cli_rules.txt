@@ -1,0 +1,61 @@
+exit=0
+--- stdout
+id  pri   on  sign   account           tag                  category  conf                                                pattern
+--  ---  ---  ----  --------  ------------  ------------------------  ----  -----------------------------------------------------
+ 1   10  yes   out  11111111      transfer                  Transfer  0.97                                   SAMPLE REWARDS.*EPAY
+ 2   10  yes    in  33333333      transfer                  Transfer  0.97                                      Payment Thank You
+ 3   10  yes   out  11111111      transfer                  Transfer  0.97                                CHARGE CARD CO.*ACH PMT
+ 4   10  yes    in  55555555      transfer                  Transfer  0.97                    (ONLINE|MOBILE) PAYMENT - THANK YOU
+ 5   10  yes    in  11111111      transfer                  Transfer  0.97                                   PAYPAL.*DES:TRANSFER
+ 6   10  yes   out  22222222      transfer                  Transfer  0.97                                 Money Transfer to Bank
+ 7   10  yes    in  44444444      transfer                  Transfer  0.95                     SAMPLE CARD (?:ONLINE|MOBILE) PYMT
+ 8   15  yes    in                  branda         Revenue - Hosting  0.98                           EXAMPLE PAYMENTS.*FUNDS DISB
+ 9   15  yes   out                  branda   Payment Processing Fees  0.98                           EXAMPLE PAYMENTS.*FUNDS DISB
+10   15  yes    in                  branda         Revenue - Hosting  0.96                                       STRIPE.*TRANSFER
+11   16  yes        22222222        branda   Payment Processing Fees  0.90                (?i)(^fee\b|paypal fee|transaction fee)
+12   17  yes   out  22222222        branda                   Refunds  0.96                                            ^Refund to 
+13   17  yes        22222222        branda           Domains/DNS/SSL  0.96                                       SAMPLE REGISTRAR
+14   17  yes                        branda           Domains/DNS/SSL  0.94                                           SAMPLE CERTS
+15   17  yes                    owner_draw                Owner Draw  0.80                                  EXAMPLE THEATER GUILD
+16   19  yes    in  22222222        branda         Revenue - Hosting  0.90                                         ^Payment from 
+17   20  yes    in  11111111    consulting      Revenue - Consulting  0.96                            SAMPLE CLIENT LLC.*PAYMENTS
+18   22  yes    in  11111111    consulting      Revenue - Consulting  0.90                               EXAMPLE LAB INC.*PAYMENT
+19   25  yes                       general                   Payroll  0.97                                WIDGET PAYROLL.*PAYROLL
+20   25  yes                       general                   Payroll  0.97                                WIDGET PAYROLL.*DES:TAX
+21   25  yes                       general       Software & Licenses  0.96                                   WIDGET CLOUD \*BOOKS
+22   26  yes                       general          Bank & Card Fees  0.99                                Monthly Maintenance Fee
+23   30  yes   out  11111111    owner_draw                Owner Draw  0.97                         Online Banking transfer to CHK
+24   30  yes   out              owner_draw                Owner Draw  0.96                                     EXAMPLE.*BROKERAGE
+25   31  yes                    owner_draw                Owner Draw  0.75                    \bSAMPLE STREAMING\b|\bFAKE GAMES\b
+26   32  yes                    owner_draw                Owner Draw  0.72                        \bFAKE MART\b|\bSAMPLE GROCER\b
+27   33  yes                       general          Taxes & Licenses  0.90                                         EXAMPLE COUNTY
+30   33  yes                        branda       Software & Licenses  0.90                                    PAYPAL \*WIDGETSOFT
+32   33  yes                       general              Office/Other  0.90                                      PAYPAL \*FAKE INK
+28   34  yes                  needs_review             Uncategorized  0.30                                     SAMPLE MARKETPLACE
+29   34  yes                  needs_review             Uncategorized  0.20                                                  ^PRO$
+31   34  yes                        branda       Software & Licenses  0.90                                         \bWIDGETSOFT\b
+33   34  yes                       general              Office/Other  0.90                                             FAKE\s*INK
+34   38  yes                        branda       Software & Licenses  0.92  PADDLE\.NET\*\s*SAMPLE ANALYTICS|\bSAMPLE ANALYTICS\b
+40   39  yes                        branda  Hosting & Infrastructure  0.90                                 PAYPAL \*SAMPLE BACKUP
+35   40  yes                        branda  Hosting & Infrastructure  0.96                                           ACME HOSTING
+36   40  yes                        branda  Hosting & Infrastructure  0.96                                           EXAMPLE COLO
+37   40  yes                        branda  Hosting & Infrastructure  0.94                              ^AWS$|Amazon Web Services
+38   40  yes                        branda  Hosting & Infrastructure  0.94                                         Google\s*Cloud
+39   40  yes                       general  Hosting & Infrastructure  0.95                                       SAMPLE PAAS\.COM
+41   40  yes                        branda  Hosting & Infrastructure  0.95                                          SAMPLE BACKUP
+42   44  yes                        branda       Software & Licenses  0.80                                    \bSAMPLE HELPDESK\b
+43   45  yes                        branda       Software & Licenses  0.96                                              PANELSOFT
+44   45  yes                        branda       Software & Licenses  0.96                                                  WHMCS
+45   45  yes                    consulting       Software & Licenses  0.94                                           \bTUNNELCO\b
+46   45  yes                    consulting       Software & Licenses  0.94                   SAMPLE IDE \(BY EXAMPLE\)|SAMPLE IDE
+47   48  yes                        branda           Domains/DNS/SSL  0.95                         SAMPLE DOMAINS|\bEXAMPLE NIC\b
+48   50  yes                    consulting                  AI Tools  0.95              WIDGET AI|WIDGETAI\.EXAMPLE|WIDGET AI SUB
+49   54  yes        33333333       general          Bank & Card Fees  0.99           ANNUAL MEMBERSHIP FEE|RENEWAL MEMBERSHIP FEE
+50   54  yes        55555555       general          Bank & Card Fees  0.99                                 RENEWAL MEMBERSHIP FEE
+51   55  yes                       general                  Interest  0.99                                        INTEREST CHARGE
+52   55  yes                        branda          Bank & Card Fees  0.99           ANNUAL MEMBERSHIP FEE|RENEWAL MEMBERSHIP FEE
+53   60  yes                       general              Office/Other  0.90                                   EXAMPLE INSURANCE CO
+54   60  yes                       general              Office/Other  0.92                                     EXAMPLE ACCOUNTING
+55   60  yes                       general          Taxes & Licenses  0.90                                     STATE DEPT REVENUE
+56   60  yes                       general              Office/Other  0.60                                    \bSAMPLE INTERNET\b
+--- stderr

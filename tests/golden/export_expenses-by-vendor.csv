@@ -1,0 +1,15 @@
+status=200
+Merchant,Spend,Count,Category,Last seen
+WIDGET PAYROLL DES:PAYROLL ID:77,13500.00,9,Payroll,2026-09-15
+Acme Hosting,1125.00,9,Hosting & Infrastructure,2026-09-02
+WIDGET CLOUD *BOOKS ONLINE,810.00,9,Software & Licenses,2026-09-06
+ZZZ MYSTERY VENDOR,679.05,9,Office/Other,2026-09-17
+EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002,406.80,9,Payment Processing Fees,2026-09-04
+Fake Hosting,225.00,3,Hosting & Infrastructure,2026-09-08
+Sample Certs,224.91,9,Domains/DNS/SSL,2026-09-09
+Fake AI,180.00,9,AI Tools,2026-09-11
+Monthly Maintenance Fee,144.00,9,Bank & Card Fees,2026-09-28
+ZZZ PENDING SHOP,42.00,1,Uncategorized,2026-09-28
+PayPal Fee,27.90,9,Payment Processing Fees,2026-09-07
+ZZZ COFFEE CART,18.00,1,Uncategorized,2026-09-29
+Total,17382.66,86,,

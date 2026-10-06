@@ -1,0 +1,188 @@
+# Test config. Every name, id, host, and number here is made up.
+# conftest.py points HPBOOKS_CONFIG here so tests never read config/local.toml.
+# It mirrors the shape of a full install (three businesses, five seeded accounts,
+# transfer pairs, a rules file, WHMCS on) so every code path has data.
+
+[app]
+product_name = "Example Books"
+company_name = "Example Co"
+wordmark = "Example"
+
+[features]
+whmcs = true
+margins = true
+
+[[businesses]]
+slug = "branda"
+label = "Brand A"
+kind = "brand"
+color = "#0d9488"
+color_dark = "#2dd4bf"
+revenue_category = "Revenue - Hosting"
+
+[[businesses]]
+slug = "consulting"
+label = "Consulting"
+kind = "consulting"
+color = "#4f46e5"
+color_dark = "#a5b4fc"
+revenue_category = "Revenue - Consulting"
+
+[[businesses]]
+slug = "general"
+label = "General"
+kind = "overhead"
+color = "#64748b"
+color_dark = "#94a3b8"
+
+[categories]
+revenue = ["Revenue - Hosting", "Revenue - Consulting"]
+cogs = ["Hosting & Infrastructure"]
+opex = [
+  "Software & Licenses",
+  "Domains/DNS/SSL",
+  "AI Tools",
+  "Payroll",
+  "Contractors",
+  "Bank & Card Fees",
+  "Payment Processing Fees",
+  "Interest",
+  "Advertising",
+  "Office/Other",
+  "Taxes & Licenses",
+]
+
+[[accounts.business]]
+id = "11111111-1111-4111-8111-111111111111"
+name = "Example Bank Checking 0101"
+type = "cash"
+last4 = "0101"
+institution = "Example Bank"
+short_name = "Bank 0101"
+short_name_prefix = "Example Bank"
+label = "Bank"
+roles = ["operating"]
+
+[[accounts.business]]
+id = "22222222-2222-4222-8222-222222222222"
+name = "PayPal Business"
+type = "cash"
+institution = "PayPal"
+short_name = "PayPal"
+short_name_prefix = "PayPal"
+label = "PayPal"
+roles = ["paypal"]
+
+[[accounts.business]]
+id = "33333333-3333-4333-8333-333333333333"
+name = "Sample Rewards 0303"
+type = "liability"
+last4 = "0303"
+institution = "Sample Card Co"
+short_name = "Rewards 0303"
+short_name_prefix = "Sample Rewards"
+label = "Rewards"
+
+[[accounts.business]]
+id = "44444444-4444-4444-8444-444444444444"
+name = "Sample Card 0404 (history from 2026-07-02)"
+type = "liability"
+last4 = "0404"
+institution = "Sample Card Co"
+notes = "Card history starts 2026-07-02. Earlier checking payments may be a personal card."
+short_name = "Card 0404"
+short_name_prefix = "Sample Card"
+label = "Card"
+roles = ["capitalone_default"]
+
+[[accounts.business]]
+id = "55555555-5555-4555-8555-555555555555"
+name = "Charge Card 0505"
+type = "liability"
+last4 = "0505"
+institution = "Example Charge Co"
+short_name = "Charge 0505"
+short_name_prefix = "Charge Card"
+label = "Charge"
+
+[[transfer_pairs]]
+kind = "rewards_card"
+left_account = "operating"
+left_pattern = "SAMPLE REWARDS.*EPAY"
+right_account = "33333333-3333-4333-8333-333333333333"
+right_pattern = "Payment Thank You"
+
+[[transfer_pairs]]
+kind = "charge_card"
+left_account = "operating"
+left_pattern = "CHARGE CARD CO.*ACH PMT"
+right_account = "55555555-5555-4555-8555-555555555555"
+right_pattern = "(ONLINE|MOBILE) PAYMENT - THANK YOU"
+
+[[transfer_pairs]]
+kind = "paypal"
+left_account = "paypal"
+left_pattern = "Money Transfer to Bank"
+right_account = "operating"
+right_pattern = "PAYPAL.*DES:TRANSFER"
+
+[[transfer_pairs]]
+kind = "sample_card"
+left_account = "operating"
+left_pattern = "SAMPLE CARD.*(ONLINE|MOBILE) PMT"
+right_account = "capitalone_default"
+right_pattern = "SAMPLE CARD (?:ONLINE|MOBILE) PYMT"
+window = "after0_7"
+classify_left = true
+matched_note = "matched to cash card payment {txn_id}"
+unmatched_note = "checking->card payment not matched to Card 0404 (card history starts 2026-07-02; may be a personal card)"
+
+[seed]
+rules_file = "seed_rules.test.json"
+starter_rules = false
+prior_business = "branda"
+
+[seed.prior_category_map]
+"Cloud servers" = "Hosting & Infrastructure"
+"Storage" = "Hosting & Infrastructure"
+"Licenses" = "Software & Licenses"
+"Domains" = "Domains/DNS/SSL"
+"AI services" = "AI Tools"
+
+[whmcs]
+ssh_user = "hpbooks"
+ssh_key = "~/.ssh/example_whmcs_key"
+mysql_user = "books_ro"
+revenue_category = "Revenue - Hosting"
+
+[[whmcs.brands]]
+name = "BrandA"
+server = "billing.branda.example"
+database = "whmcs"
+port = 3307
+secret = "whmcs_a.secret"
+
+[[whmcs.brands]]
+name = "BrandB"
+server = "billing.brandb.example"
+database = "whmcs"
+port = 3308
+secret = "whmcs_b.secret"
+
+[[whmcs.brands]]
+name = "BrandC"
+server = "billing.brandb.example"
+database = "whmcs_c"
+port = 3308
+secret = "whmcs_b.secret"
+
+[[whmcs.bank_sides]]
+gateway = "paypal"
+account_role = "paypal"
+label = "PayPal account, hosting deposits less refunds"
+
+[[whmcs.bank_sides]]
+gateway = "cardgw"
+account_role = "operating"
+label = "Bank card settlements"
+match = "example payments|card settlement"

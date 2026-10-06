@@ -1,0 +1,21 @@
+status=200
+Line,Brand A,Consulting,General,Total
+Revenue - Hosting,21331.35,0.00,0.00,21331.35
+Revenue - Consulting,0.00,36000.00,0.00,36000.00
+Gross Revenue,21331.35,36000.00,0.00,57331.35
+Refunds,0.00,0.00,0.00,0.00
+Net Revenue,21331.35,36000.00,0.00,57331.35
+Hosting & Infrastructure,1350.00,0.00,0.00,1350.00
+Gross Profit,19981.35,36000.00,0.00,55981.35
+Software & Licenses,0.00,0.00,810.00,810.00
+Domains/DNS/SSL,224.91,0.00,0.00,224.91
+AI Tools,0.00,0.00,180.00,180.00
+Payroll,0.00,0.00,13500.00,13500.00
+Bank & Card Fees,0.00,0.00,144.00,144.00
+Payment Processing Fees,434.70,0.00,0.00,434.70
+Office/Other,0.00,87.45,591.60,679.05
+Total Operating Expenses,659.61,87.45,15225.60,15972.66
+Uncategorized / needs_review,0.00,0.00,0.00,-60.00
+Net Income,19321.74,35912.55,-15225.60,39948.69
+Owner Draws (below the line),0.00,0.00,0.00,41715.90
+Net after Owner Draws,0.00,0.00,0.00,-1767.21

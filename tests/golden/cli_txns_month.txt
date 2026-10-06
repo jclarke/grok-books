@@ -1,0 +1,27 @@
+exit=0
+--- stdout
+date        account          amount       source         tag                  category                                                 name        id
+----------  ------------  ---------  -----------  ----------  ------------------------  ---------------------------------------------------  --------
+2026-03-28  Bank 0101        -16.00  finance-mcp     general          Bank & Card Fees                              Monthly Maintenance Fee  g-bank-f
+2026-03-23  Charge 0505      221.00  finance-mcp    transfer                  Transfer                           ONLINE PAYMENT - THANK YOU  g-chg-pa
+2026-03-22  Rewards 0303     333.00  finance-mcp    transfer                  Transfer                             Payment Thank You-Mobile  g-rew-pa
+2026-03-21  Bank 0101       -221.00  finance-mcp    transfer                  Transfer                      CHARGE CARD CO DES:ACH PMT ID:6  g-bank-c
+2026-03-20  Bank 0101       -333.00  finance-mcp    transfer                  Transfer                         SAMPLE REWARDS DES:EPAY ID:5  g-bank-r
+2026-03-17  Bank 0101        -69.45  finance-mcp     general              Office/Other                                   ZZZ MYSTERY VENDOR  g-bank-m
+2026-03-15  Bank 0101     -1,500.00  finance-mcp     general                   Payroll                     WIDGET PAYROLL DES:PAYROLL ID:77  g-bank-p
+2026-03-14  Charge 0505      -33.10  finance-mcp  owner_draw                Owner Draw                                       FAKE MART #123  g-chg-ma
+2026-03-12  PayPal          -153.00  finance-mcp    transfer                  Transfer                               Money Transfer to Bank  g-pp-out
+2026-03-12  Bank 0101        153.00  finance-mcp    transfer                  Transfer                             PAYPAL DES:TRANSFER ID:8  g-bank-p
+2026-03-11  Charge 0505      -20.00  finance-mcp     general                  AI Tools                                    FAKE AI TOOLS INC  g-chg-ai
+2026-03-10  Bank 0101     -2,500.00  finance-mcp  owner_draw                Owner Draw  Online Banking transfer to CHK 0000 Confirmation# 1  g-bank-d
+2026-03-09  Rewards 0303     -24.99  finance-mcp      branda           Domains/DNS/SSL                                     SAMPLE CERTS INC  g-rew-ce
+2026-03-07  PayPal            83.00  finance-mcp      branda         Revenue - Hosting                              Payment from Customer 3  g-pp-pay
+2026-03-07  PayPal            -3.10  finance-mcp      branda   Payment Processing Fees                                           PayPal Fee  g-pp-fee
+2026-03-06  Rewards 0303     -90.00  finance-mcp     general       Software & Licenses                           WIDGET CLOUD *BOOKS ONLINE  g-rew-bo
+2026-03-05  Bank 0101      4,000.00  finance-mcp  consulting      Revenue - Consulting                  SAMPLE CLIENT LLC DES:PAYMENTS ID:9  g-bank-c
+2026-03-04  Bank 0101        -43.20  finance-mcp      branda   Payment Processing Fees              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002  g-bank-p
+2026-03-03  Bank 0101      2,211.15  finance-mcp      branda         Revenue - Hosting              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001  g-bank-p
+2026-03-02  Rewards 0303    -123.00  finance-mcp      branda  Hosting & Infrastructure                                ACME HOSTING HOLDINGS  g-rew-ac
+2026-03-01  Bank 0101     -2,100.00  finance-mcp  owner_draw                Owner Draw                  FAKE MORTGAGE SERVICER DES:MTG PYMT  g-bank-m
+--- stderr
+21 shown of 21

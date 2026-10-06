@@ -1,0 +1,8 @@
+exit=0
+--- stdout
+id        date        account       amount              name      suggested              note
+--------  ----------  ------------  ------  ----------------  -------------  ----------------
+g-bank-p  2026-09-28  Bank 0101     -42.00  ZZZ PENDING SHOP  Uncategorized  no matching rule
+g-rew-pe  2026-09-29  Rewards 0303  -18.00   ZZZ COFFEE CART  Uncategorized  no matching rule
+--- stderr
+2 needs_review

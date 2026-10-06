@@ -1,0 +1,8 @@
+exit=0
+--- stdout
+Bank 0101: 16,192.55 as of 2026-09-25 (finance), opening 19,938.05, reconciliation difference 2,475.05 (statement 16,250.55, computed 13,775.50)
+PayPal: imported activity -657.90 (cash; no statement balance)
+Rewards 0303: 530.40 as of 2026-09-25 (finance), opening 1,547.49, reconciles to 512.40
+Card 0404: imported activity 0.00 (liability; no statement balance)
+Charge 0505: imported activity -1,619.10 (liability; no statement balance)
+--- stderr

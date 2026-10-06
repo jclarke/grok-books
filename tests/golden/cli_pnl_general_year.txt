@@ -1,0 +1,22 @@
+exit=0
+--- stdout
+Example Co — Profit & Loss 2026 (business: general)
+Generated 2026-09-30
+
+Line                            2026       Total
+------------------------  ----------  ----------
+Revenue - Hosting               0.00        0.00
+Revenue - Consulting            0.00        0.00
+Gross Revenue                   0.00        0.00
+Refunds                         0.00        0.00
+Net Revenue                     0.00        0.00
+Hosting & Infrastructure        0.00        0.00
+Gross Profit                    0.00        0.00
+Software & Licenses           810.00      810.00
+AI Tools                      180.00      180.00
+Payroll                    13,500.00   13,500.00
+Bank & Card Fees              144.00      144.00
+Office/Other                  591.60      591.60
+Total Operating Expenses   15,225.60   15,225.60
+Net Income                -15,225.60  -15,225.60
+--- stderr

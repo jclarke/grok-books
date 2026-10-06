@@ -1,0 +1,15 @@
+exit=0
+--- stdout
+date        account      amount       source         tag    category            name        id
+----------  -----------  ------  -----------  ----------  ----------  --------------  --------
+2026-09-14  Charge 0505  -39.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-08-14  Charge 0505  -38.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-07-14  Charge 0505  -37.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-06-14  Charge 0505  -36.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-05-14  Charge 0505  -35.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-04-14  Charge 0505  -34.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-03-14  Charge 0505  -33.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-02-14  Charge 0505  -32.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+2026-01-14  Charge 0505  -31.10  finance-mcp  owner_draw  Owner Draw  FAKE MART #123  g-chg-ma
+--- stderr
+9 shown of 9

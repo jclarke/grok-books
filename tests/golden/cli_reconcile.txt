@@ -1,0 +1,14 @@
+exit=0
+--- stdout
+Reconcile 2026
+Raw sum of active txns:       -1,767.21
+Transfers (60):             0.00
+Owner draws (27):            -41,715.90
+Raw - transfers - draws:       39,948.69
+P&L net income (all):          39,948.69
+  branda           tag      19,321.74   P&L      19,321.74
+  consulting       tag      35,912.55   P&L      35,912.55
+  general          tag     -15,225.60   P&L     -15,225.60
+  needs_review     tag         -60.00
+OK
+--- stderr

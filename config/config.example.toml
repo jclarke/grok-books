@@ -1,0 +1,183 @@
+# hpbooks site configuration — example with every key and its default.
+#
+# Copy to config/local.toml (gitignored) and edit, or point HPBOOKS_CONFIG at
+# another file. With no config file the built-in defaults below are used, and
+# `bin/hpbooks init` creates an empty ledger with generic categories and
+# starter rules and no seeded accounts.
+#
+# Business tags and categories are written into the database's CHECK
+# constraints when the database is first created. Decide them before
+# `bin/hpbooks init`; changing them later needs a fresh database. Everything
+# else can change at any time (restart the web server to pick it up).
+
+[app]
+product_name = "Books"          # browser title, sign-in screen, CSV/PDF headers
+company_name = "My Business"    # P&L titles, sidebar
+wordmark = "Books"              # logo text; defaults to product_name. The logo's second line
+                                # is whatever product_name adds after the wordmark.
+
+[paths]
+# Relative paths are relative to the repository. HPBOOKS_DB / HPBOOKS_KEY_FILE override.
+# db = "data/hpbooks.db"
+# key_file = "~/.config/hpbooks/key"
+
+[features]
+whmcs = false      # WHMCS billing import, reports, and PayPal reconciliation
+# margins = false  # server margins; defaults to the whmcs value and needs whmcs = true
+
+# --- businesses ---------------------------------------------------------------------
+# The business tags the P&L is split by, in display order. owner_draw, transfer,
+# and needs_review are built in. kind: "brand" | "consulting" | "overhead" | any
+# text. The first "overhead" business (else the last one) receives generic costs
+# and is the default tag in the UI. revenue_category ties a business to a revenue
+# line for the dashboard revenue split and review suggestions. tone (brand, info,
+# neutral, warn, pos, neg, violet) colours badges; color / color_dark colour charts.
+
+[[businesses]]
+slug = "general"
+label = "General"
+kind = "overhead"
+color = "#64748b"
+color_dark = "#94a3b8"
+# tone = "neutral"
+# revenue_category = "Revenue - Services"
+
+# A two-business example:
+# [[businesses]]
+# slug = "shop"
+# label = "Online Shop"
+# kind = "brand"
+# tone = "brand"
+# color = "#0d9488"
+# color_dark = "#2dd4bf"
+# revenue_category = "Revenue - Sales"
+
+# --- P&L categories -----------------------------------------------------------------
+# Refunds, Owner Draw, Transfer, and Uncategorized are built in. The starter rules use
+# these default names; a starter rule whose category is missing is skipped. Operating
+# expense categories named like a Schedule C line (Advertising, Contractors, Insurance,
+# Interest, Professional Services, Office/Other, Rent, Taxes & Licenses, Travel, Meals,
+# Utilities, Payroll) get that line in the Schedule C report; the rest are listed under
+# line 27, "Other expenses". "Office/Other" is where the classify controls start.
+[categories]
+revenue = ["Revenue - Sales", "Revenue - Services"]
+cogs = ["Cost of Goods Sold"]
+opex = [
+  "Software & Licenses",
+  "Payroll",
+  "Contractors",
+  "Professional Services",
+  "Advertising",
+  "Bank & Card Fees",
+  "Payment Processing Fees",
+  "Interest",
+  "Insurance",
+  "Rent",
+  "Utilities",
+  "Travel",
+  "Meals",
+  "Taxes & Licenses",
+  "Office/Other",
+]
+
+# --- business accounts seeded by `init` ----------------------------------------------
+# None by default: accounts are registered from imports (`bin/hpbooks accounts discover`).
+# type: cash | liability. short_name is the compact label in tables; any account whose
+# name starts with short_name_prefix gets it too. label is the short word used in copy
+# ("Money in Bank and PayPal"). roles:
+#   operating           checking account for the 60-day cash outlook and recurring items
+#   paypal              PayPal account for WHMCS PayPal reconciliation (whmcs.paypal_account_role)
+#   capitalone_default  default account for `import-capitalone` / `verify-capitalone`
+#
+# [[accounts.business]]
+# id = "00000000-0000-4000-8000-000000000001"   # the Finance/aggregator account id
+# name = "Example Bank Checking 0001"
+# type = "cash"
+# last4 = "0001"
+# institution = "Example Bank"
+# notes = ""
+# short_name = "Bank 0001"
+# short_name_prefix = "Example Bank"
+# label = "Bank"
+# roles = ["operating"]
+
+# --- transfer pairs -------------------------------------------------------------------
+# Payments between two accounts, matched by equal amount within a window.
+# left_account / right_account: an account id or a role. window: "abs7" (within
+# 7 days either way) or "after0_7" (right side 0-7 days after the left).
+# classify_left = true tags matched left rows as transfers and sends unmatched ones
+# to review (notes from matched_note, with {txn_id}, and unmatched_note).
+#
+# [[transfer_pairs]]
+# kind = "card"
+# left_account = "operating"
+# left_pattern = "EXAMPLE CARD.*PAYMENT"
+# right_account = "00000000-0000-4000-8000-000000000002"
+# right_pattern = "PAYMENT - THANK YOU"
+# window = "abs7"
+# classify_left = false
+# matched_note = "matched to transfer {txn_id}"
+# unmatched_note = "transfer not matched to the other account"
+
+# --- seed rules ------------------------------------------------------------------------
+[seed]
+starter_rules = true    # generic starter rules (payouts, fees, interest, common SaaS, taxes)
+# rules_file = "seed_rules.local.json"   # relative to this file. A JSON list of objects:
+#   {"priority": 20, "pattern": "ACME.*PAYMENT", "field": "any", "account": null,
+#    "sign": "in", "tag": "general", "category": "Revenue - Services",
+#    "confidence": 0.9, "note": "client payment"}
+# prior_csv = ""          # optional earlier analysis: CSV with txn_id,status,category,vendor
+# prior_business = ""     # business tag for the CSV's business rows
+# prior_status = "business"   # the status column value that marks a business row
+# [seed.prior_category_map]  # prior CSV category -> books category
+# "Cloud & servers" = "Software & Licenses"
+
+# --- importers (scripts/import_*.py) ----------------------------------------------------
+[importers]
+applecard_account_id = "manual-apple-card"   # id of the account the Apple Card import creates
+# cfna_last4 = "1234"                        # default --last4 for scripts/import_cfna.py
+# Monarch account name -> text found in one of your account names, for accounts without
+# a last 4 in the Monarch name (scripts/import_monarch.py; --map adds more per run).
+[importers.monarch_aliases]
+"apple card" = "apple card"
+"apple cash" = "apple cash"
+
+# --- loan payment hints ---------------------------------------------------------------
+# `hpbooks accounts infer-payments` learns a personal loan's payment amount and due day from the
+# bank rows that pay it. match is the loan's last 4, or a fragment of its name; pattern
+# is a regex for the bank description of the payment.
+# [[payments.payer_hints]]
+# match = "1234"
+# pattern = "EXAMPLE LENDER.*PAYMENT"
+
+# --- WHMCS (only read when features.whmcs = true) ----------------------------------------
+[whmcs]
+ssh_user = "hpbooks"
+ssh_key = "~/.ssh/hpbooks_whmcs"
+mysql_user = "books_ro"
+placeholder_credit_cents = 100000000      # credit at or above this ($1,000,000) is a placeholder, not money
+# revenue_category = "Revenue - Sales"    # books category of WHMCS revenue deposits; default: the first revenue category
+paypal_account_role = "paypal"
+
+# One entry per WHMCS install, reached by an SSH tunnel to a local port. The MySQL
+# password is read from `secret`, a mode-600 file next to the database.
+# [[whmcs.brands]]
+# name = "ExampleHost"
+# server = "billing.example.com"
+# database = "whmcs"
+# port = 3307
+# secret = "whmcs.secret"
+
+# Bank-side totals beside each WHMCS gateway in the reconciliation report.
+# Default: PayPal gateway vs the "paypal" role account. match limits the rows to
+# those whose text matches the regex.
+# [[whmcs.bank_sides]]
+# gateway = "paypal"
+# account_role = "paypal"
+# label = "PayPal account, deposits less refunds"
+#
+# [[whmcs.bank_sides]]
+# gateway = "stripe"
+# account_role = "operating"
+# label = "Card processor deposits"
+# match = "stripe"

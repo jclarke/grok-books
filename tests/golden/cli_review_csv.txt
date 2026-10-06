@@ -1,0 +1,7 @@
+exit=0
+--- stdout
+id,date,account,amount,name,suggested_category,note
+g-bank-posted-1,2026-09-28,Example Bank Checking 0101,-42.00,ZZZ PENDING SHOP,Uncategorized,no matching rule
+g-rew-pending-1,2026-09-29,Sample Rewards 0303,-18.00,ZZZ COFFEE CART,Uncategorized,no matching rule
+--- stderr
+2 needs_review

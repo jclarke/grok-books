@@ -1,0 +1,111 @@
+/* Print: just the report, black on white, no app chrome. */
+@media print {
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f3f4f6;
+    --surface-3: #e5e7eb;
+    --border: #d1d5db;
+    --border-strong: #9ca3af;
+    --text: #000000;
+    --text-2: #1f2937;
+    --text-3: #4b5563;
+    --neg: #b42318;
+    --pos: #000000;
+    --brand-text: #000000;
+  }
+
+  @page {
+    margin: 14mm 12mm;
+  }
+
+  body {
+    background: #fff;
+    font-size: 10.5pt;
+  }
+
+  .shell {
+    display: block;
+  }
+
+  .shell__sidebar,
+  .topbar,
+  .bottom-nav,
+  .toaster,
+  .skip-link,
+  .no-print,
+  .page-header__actions,
+  .page-header__eyebrow,
+  .table-hint,
+  .pagination,
+  .dialog-root {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+  }
+
+  .print-title {
+    padding: 0 0 8pt;
+  }
+
+  .print-title h1 {
+    font-size: 14pt;
+  }
+
+  .print-title p {
+    color: #4b5563;
+    font-size: 9pt;
+  }
+
+  .page--report .page-header {
+    display: none;
+  }
+
+  .content {
+    max-width: none;
+    padding: 0;
+  }
+
+  .page {
+    animation: none;
+    gap: 8pt;
+  }
+
+  .card,
+  .table-card {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .table-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .table thead th {
+    position: static;
+    background: #fff;
+    border-bottom: 1.5pt solid #000;
+  }
+
+  .statement__label-col {
+    position: static;
+  }
+
+  .statement tr {
+    break-inside: avoid;
+  }
+
+  .drill-link {
+    text-decoration: none !important;
+  }
+
+  a {
+    color: inherit;
+  }
+}

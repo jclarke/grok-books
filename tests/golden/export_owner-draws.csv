@@ -1,0 +1,30 @@
+status=200
+Date,Account,Description,Draw,Note
+2026-01-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-01-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-01-14,Charge 0505,FAKE MART #123,31.10,groceries
+2026-02-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-02-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-02-14,Charge 0505,FAKE MART #123,32.10,groceries
+2026-03-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-03-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-03-14,Charge 0505,FAKE MART #123,33.10,groceries
+2026-04-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-04-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-04-14,Charge 0505,FAKE MART #123,34.10,groceries
+2026-05-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-05-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-05-14,Charge 0505,FAKE MART #123,35.10,groceries
+2026-06-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-06-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-06-14,Charge 0505,FAKE MART #123,36.10,groceries
+2026-07-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-07-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-07-14,Charge 0505,FAKE MART #123,37.10,groceries
+2026-08-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-08-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-08-14,Charge 0505,FAKE MART #123,38.10,groceries
+2026-09-01,Bank 0101,FAKE MORTGAGE SERVICER DES:MTG PYMT,2100.00,
+2026-09-10,Bank 0101,Online Banking transfer to CHK 0000 Confirmation# 1,2500.00,transfer to personal checking
+2026-09-14,Charge 0505,FAKE MART #123,39.10,groceries
+Total,,,41715.90,

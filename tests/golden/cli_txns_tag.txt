@@ -1,0 +1,8 @@
+exit=0
+--- stdout
+date        account       amount       source           tag       category              name        id
+----------  ------------  ------  -----------  ------------  -------------  ----------------  --------
+2026-09-29  Rewards 0303  -18.00  finance-mcp  needs_review  Uncategorized   ZZZ COFFEE CART  g-rew-pe
+2026-09-28  Bank 0101     -42.00  finance-mcp  needs_review  Uncategorized  ZZZ PENDING SHOP  g-bank-p
+--- stderr
+2 shown of 2

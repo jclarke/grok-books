@@ -1,0 +1,25 @@
+status=200
+Line,Description,Amount
+1,Gross receipts or sales,57331.35
+2,Returns and allowances,0.00
+3,Net receipts,57331.35
+4,Cost of goods sold (hosting & infrastructure),1350.00
+5,Gross profit,55981.35
+6,Other income,0.00
+7,Gross income,55981.35
+8,Advertising,0.00
+11,Contract labor,0.00
+16b,Interest (other),0.00
+18,Office expense,679.05
+23,Taxes and licenses,0.00
+26,Wages,13500.00
+27a,Other: Software & Licenses,810.00
+27b,Other: Domains/DNS/SSL,224.91
+27c,Other: AI Tools,180.00
+27d,Other: Bank & Card Fees,144.00
+27e,Other: Payment Processing Fees,434.70
+28,Total expenses,15972.66
+31,Net profit (or loss),40008.69
+,Memo: uncategorized / needs_review (not in the lines above),-60.00
+,Memo: net profit plus uncategorized equals P&L net income,39948.69
+,Memo: owner draws are omitted (not a Schedule C deduction),41715.90

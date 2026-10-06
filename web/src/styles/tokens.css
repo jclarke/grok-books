@@ -1,0 +1,239 @@
+/*
+ * Design tokens. Every color, size, and radius in the app comes from here.
+ * Light is the default; dark follows the OS unless data-theme pins a choice.
+ * Text colors meet WCAG AA (4.5:1) on --surface and --bg in both themes.
+ */
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface-2: #f1f4f7;
+  --surface-3: #e7ecf1;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --border: #e1e6eb;
+  --border-strong: #c9d1d9;
+
+  /* Text */
+  --text: #0f172a;
+  --text-2: #475467;
+  --text-3: #5f6b7a;
+  --text-inverse: #ffffff;
+
+  /* Brand */
+  --brand: #0f766e;
+  --brand-hover: #115e59;
+  --brand-soft: #e0f5f2;
+  --brand-ink: #ffffff;
+  --brand-text: #0f766e;
+
+  /* Sidebar */
+  --nav-bg: #0f2a2a;
+  --nav-text: #c8dcda;
+  --nav-text-active: #ffffff;
+  --nav-active: #18403f;
+  --nav-hover: #143535;
+  --nav-muted: #8fb0ad;
+
+  /* Semantic */
+  --pos: #047857;
+  --pos-soft: #e3f6ee;
+  --neg: #b42318;
+  --neg-soft: #fdecea;
+  --warn: #9a5b00;
+  --warn-soft: #fff4e0;
+  --info: #1d4ed8;
+  --info-soft: #e8efff;
+  --neutral-soft: #eef1f4;
+
+  /* Charts (3:1+ against --surface) */
+  --chart-rev: #0d9488;
+  --chart-exp: #e2622b;
+  --chart-net: #4f46e5;
+  --chart-grid: #e8ecf0;
+  --chart-axis: #5f6b7a;
+  --chart-reserve: #b45309;
+  --cat-1: #0d9488;
+  --cat-2: #4f46e5;
+  --cat-3: #d97706;
+  --cat-4: #db2777;
+  --cat-5: #0284c7;
+  --cat-6: #7c3aed;
+  --cat-7: #65a30d;
+  --cat-8: #dc2626;
+  --cat-9: #0891b2;
+  --cat-10: #64748b;
+
+  /* Business colors (--biz-<slug>) are injected at runtime from the site config. */
+
+  /* Type scale */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-md: 0.875rem;
+  --fs-lg: 1rem;
+  --fs-xl: 1.25rem;
+  --fs-2xl: 1.5rem;
+  --fs-3xl: 1.875rem;
+  --lh-tight: 1.2;
+  --lh: 1.5;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Spacing (4px grid) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+
+  /* Shape and depth */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-full: 999px;
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --shadow-2: 0 4px 8px -2px rgba(16, 24, 40, 0.1), 0 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-3: 0 20px 24px -4px rgba(16, 24, 40, 0.12), 0 8px 8px -4px rgba(16, 24, 40, 0.05);
+  --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.35);
+  --focus-color: #0f766e;
+
+  /* Layout */
+  --sidebar-w: 248px;
+  --topbar-h: 60px;
+  --bottomnav-h: 64px;
+  --content-max: 1440px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --t-fast: 120ms;
+  --t-med: 200ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0b1116;
+    --surface: #111a21;
+    --surface-2: #17222b;
+    --surface-3: #1f2c37;
+    --overlay: rgba(0, 0, 0, 0.6);
+    --border: #22303b;
+    --border-strong: #33444f;
+    --text: #e8eef3;
+    --text-2: #b0bcc7;
+    --text-3: #93a1ad;
+    --text-inverse: #0b1116;
+    --brand: #2dd4bf;
+    --brand-hover: #5eead4;
+    --brand-soft: #0f2f2c;
+    --brand-ink: #04211e;
+    --brand-text: #5eead4;
+    --nav-bg: #0a1519;
+    --nav-text: #a9bcc0;
+    --nav-text-active: #ffffff;
+    --nav-active: #15292d;
+    --nav-hover: #112126;
+    --nav-muted: #7d9397;
+    --pos: #4ade80;
+    --pos-soft: #0f2a1d;
+    --neg: #f87171;
+    --neg-soft: #34161a;
+    --warn: #fbbf24;
+    --warn-soft: #33260a;
+    --info: #93b4ff;
+    --info-soft: #17213b;
+    --neutral-soft: #1c2832;
+    --chart-rev: #2dd4bf;
+    --chart-exp: #fb923c;
+    --chart-net: #a5b4fc;
+    --chart-grid: #1f2c37;
+    --chart-axis: #93a1ad;
+    --chart-reserve: #fbbf24;
+    --cat-1: #2dd4bf;
+    --cat-2: #a5b4fc;
+    --cat-3: #fbbf24;
+    --cat-4: #f472b6;
+    --cat-5: #38bdf8;
+    --cat-6: #c4b5fd;
+    --cat-7: #a3e635;
+    --cat-8: #f87171;
+    --cat-9: #22d3ee;
+    --cat-10: #94a3b8;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 4px 10px rgba(0, 0, 0, 0.45);
+    --shadow-3: 0 20px 30px rgba(0, 0, 0, 0.55);
+    --focus-ring: 0 0 0 3px rgba(45, 212, 191, 0.4);
+    --focus-color: #2dd4bf;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1116;
+  --surface: #111a21;
+  --surface-2: #17222b;
+  --surface-3: #1f2c37;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --border: #22303b;
+  --border-strong: #33444f;
+  --text: #e8eef3;
+  --text-2: #b0bcc7;
+  --text-3: #93a1ad;
+  --text-inverse: #0b1116;
+  --brand: #2dd4bf;
+  --brand-hover: #5eead4;
+  --brand-soft: #0f2f2c;
+  --brand-ink: #04211e;
+  --brand-text: #5eead4;
+  --nav-bg: #0a1519;
+  --nav-text: #a9bcc0;
+  --nav-text-active: #ffffff;
+  --nav-active: #15292d;
+  --nav-hover: #112126;
+  --nav-muted: #7d9397;
+  --pos: #4ade80;
+  --pos-soft: #0f2a1d;
+  --neg: #f87171;
+  --neg-soft: #34161a;
+  --warn: #fbbf24;
+  --warn-soft: #33260a;
+  --info: #93b4ff;
+  --info-soft: #17213b;
+  --neutral-soft: #1c2832;
+  --chart-rev: #2dd4bf;
+  --chart-exp: #fb923c;
+  --chart-net: #a5b4fc;
+  --chart-grid: #1f2c37;
+  --chart-axis: #93a1ad;
+  --chart-reserve: #fbbf24;
+  --cat-1: #2dd4bf;
+  --cat-2: #a5b4fc;
+  --cat-3: #fbbf24;
+  --cat-4: #f472b6;
+  --cat-5: #38bdf8;
+  --cat-6: #c4b5fd;
+  --cat-7: #a3e635;
+  --cat-8: #f87171;
+  --cat-9: #22d3ee;
+  --cat-10: #94a3b8;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 10px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 20px 30px rgba(0, 0, 0, 0.55);
+  --focus-ring: 0 0 0 3px rgba(45, 212, 191, 0.4);
+  --focus-color: #2dd4bf;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0ms;
+    --t-med: 0ms;
+  }
+}

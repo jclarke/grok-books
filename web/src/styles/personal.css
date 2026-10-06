@@ -1,0 +1,472 @@
+/*
+ * Personal mode. A violet accent replaces the brand teal inside the shell so
+ * the mode is always obvious; business screens keep their look untouched.
+ */
+
+.shell--personal {
+  --brand: #6d28d9;
+  --brand-hover: #5b21b6;
+  --brand-soft: #ede9fe;
+  --brand-ink: #ffffff;
+  --brand-text: #6d28d9;
+}
+:root[data-theme="dark"] .shell--personal {
+  --brand: #a78bfa;
+  --brand-hover: #c4b5fd;
+  --brand-soft: #2e1065;
+  --brand-ink: #1e0b3b;
+  --brand-text: #c4b5fd;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shell--personal {
+    --brand: #a78bfa;
+    --brand-hover: #c4b5fd;
+    --brand-soft: #2e1065;
+    --brand-ink: #1e0b3b;
+    --brand-text: #c4b5fd;
+  }
+}
+.topbar--personal {
+  box-shadow: inset 0 -2px 0 var(--brand);
+}
+
+/* Mode toggle (Business | Personal) */
+.mode-toggle {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  background: var(--surface-2);
+}
+.mode-toggle__item {
+  border: 0;
+  border-radius: var(--r-full);
+  padding: 4px 12px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.mode-toggle__item:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.mode-toggle__item.is-active {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.mode-toggle--compact .mode-toggle__item {
+  padding: 3px 10px;
+  font-size: var(--fs-xs);
+}
+.sidebar__mode {
+  display: none;
+  padding: 0 var(--s-2) var(--s-4);
+}
+@media (max-width: 900px) {
+  .sidebar__mode {
+    display: block;
+  }
+  .topbar > .mode-toggle {
+    display: none;
+  }
+}
+
+/* Progress bars (budgets, goals) */
+.pbar {
+  position: relative;
+  height: 8px;
+  min-width: 80px;
+  border-radius: var(--r-full);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.pbar__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--pos);
+}
+.pbar--warning .pbar__fill,
+.pbar--behind .pbar__fill {
+  background: var(--warn);
+}
+.pbar--over .pbar__fill {
+  background: var(--neg);
+}
+.pbar--no_date .pbar__fill {
+  background: var(--info);
+}
+
+/* Layout helpers */
+.split-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+.goal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--s-4);
+}
+.inline-form,
+.row-actions,
+.filters__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--s-2) var(--s-3);
+}
+.filters {
+  display: grid;
+  gap: var(--s-3);
+}
+.field--inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.link-button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--brand-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.text-neg {
+  color: var(--neg);
+}
+.setup-steps {
+  display: grid;
+  gap: var(--s-1);
+  margin: var(--s-3) 0;
+  padding-left: var(--s-5);
+  text-align: left;
+}
+.setup-steps code {
+  font-size: var(--fs-xs);
+  word-break: break-word;
+}
+
+/* Lists */
+.class-list,
+.bill-list,
+.recent-list,
+.alert-list,
+.goal-mini,
+.summary-lines,
+.history {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.class-list > li,
+.bill-list > li,
+.recent-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: var(--s-1) 0;
+  border-bottom: 1px solid var(--border);
+}
+.summary-lines > li {
+  padding-left: var(--s-3);
+  border-left: 3px solid var(--brand);
+}
+.flag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  margin-top: var(--s-1);
+}
+
+/* Transactions */
+.ptxn__merchant {
+  display: grid;
+  gap: 2px;
+}
+.ptxn__name {
+  font-weight: 600;
+}
+.row--business td,
+.row--business th {
+  background: var(--info-soft);
+}
+.row--child td:first-child {
+  padding-left: var(--s-6);
+}
+
+/* Drawer */
+.pdrawer {
+  display: grid;
+  gap: var(--s-4);
+}
+.pdrawer__amount {
+  margin: 0;
+  font-size: var(--fs-2xl);
+}
+.pdrawer__facts {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+}
+.pdrawer__facts dt {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+}
+.pdrawer__facts dd {
+  margin: 0;
+}
+.pdrawer__section {
+  display: grid;
+  gap: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--border);
+}
+.pdrawer__title {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+.split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem auto;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+/* Review queue */
+.review-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(160px, 220px) auto;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--border);
+}
+.review-item.is-active {
+  background: var(--brand-soft);
+}
+.review-item__main {
+  display: grid;
+  gap: 2px;
+}
+.review-item__name {
+  font-weight: 600;
+}
+
+/* Bills calendar */
+.month-cal {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+.month-cal__head {
+  padding: var(--s-1);
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+.month-cal__cell {
+  min-height: 72px;
+  padding: var(--s-1);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: var(--fs-xs);
+}
+.month-cal__cell.is-blank {
+  background: transparent;
+}
+.month-cal__cell.is-today {
+  outline: 2px solid var(--brand);
+}
+.month-cal__day {
+  display: block;
+  color: var(--text-3);
+}
+.month-cal__item {
+  display: block;
+  margin-top: 2px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--info-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.month-cal__item--paid {
+  background: var(--pos-soft);
+}
+.month-cal__item--late,
+.month-cal__item--overdue {
+  background: var(--neg-soft);
+}
+
+/* Goals */
+.goal-card {
+  display: grid;
+  gap: var(--s-2);
+}
+.goal-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+  margin: 0;
+}
+.goal-facts dt {
+  color: var(--text-3);
+}
+.goal-facts dd {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .split-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .review-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media print {
+  .page--printable .page-header__actions,
+  .mode-toggle {
+    display: none !important;
+  }
+  .shell--personal .summary-lines > li {
+    border-left-color: #000;
+  }
+}
+
+/* Active filter chips on personal transactions (deep links from the dashboard). */
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--brand);
+  border-radius: var(--r-full);
+  background: var(--brand-soft);
+  color: var(--brand-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.filter-chip:hover {
+  background: var(--surface-2);
+}
+.filter-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filter-chip svg {
+  flex: none;
+}
+
+/* Spending page */
+.kpi-grid--spending {
+  grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+/* Spent card deliberately inherits the plain .card surface (no brand-soft/accent); only type size differs. */
+.kpi--primary .kpi__label {
+  color: var(--text);
+  font-weight: var(--fw-semibold, 600);
+}
+.kpi--primary .kpi__value {
+  font-size: var(--fs-3xl, 2.25rem);
+  font-weight: var(--fw-bold, 700);
+}
+.kpi--quiet .kpi__label {
+  color: var(--text-3);
+  font-weight: var(--fw-medium, 500);
+}
+.kpi--quiet .kpi__value {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+}
+.spend-cats {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: start;
+}
+.spend-cats__chart {
+  display: grid;
+  place-items: center;
+}
+.group-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 600;
+}
+.group-cell__toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--text-3);
+  cursor: pointer;
+}
+.group-cell__toggle:hover {
+  background: var(--surface-3, var(--border));
+  color: var(--text);
+}
+.export-menu {
+  position: relative;
+}
+.export-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.export-menu > summary::-webkit-details-marker {
+  display: none;
+}
+.export-menu__list {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  display: grid;
+  gap: var(--s-1);
+  margin-top: var(--s-1);
+  padding: var(--s-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md, 8px);
+  background: var(--surface);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.12));
+  white-space: nowrap;
+}
+@media (max-width: 900px) {
+  .kpi-grid--spending {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .kpi--primary {
+    grid-column: 1 / -1;
+  }
+  .spend-cats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

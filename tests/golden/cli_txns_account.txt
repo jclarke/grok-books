@@ -1,0 +1,46 @@
+exit=0
+--- stdout
+date        account       amount       source           tag                 category                                                 name        id
+----------  ---------  ---------  -----------  ------------  -----------------------  ---------------------------------------------------  --------
+2026-09-28  Bank 0101     -42.00  finance-mcp  needs_review            Uncategorized                                     ZZZ PENDING SHOP  g-bank-p
+2026-09-28  Bank 0101     -16.00  finance-mcp       general         Bank & Card Fees                              Monthly Maintenance Fee  g-bank-f
+2026-09-25  Bank 0101     -75.00  finance-mcp      transfer                 Transfer                      SAMPLE CARD DES:ONLINE PMT ID:1  g-bank-c
+2026-09-21  Bank 0101    -263.00  finance-mcp      transfer                 Transfer                      CHARGE CARD CO DES:ACH PMT ID:6  g-bank-c
+2026-09-20  Bank 0101    -399.00  finance-mcp      transfer                 Transfer                         SAMPLE REWARDS DES:EPAY ID:5  g-bank-r
+2026-09-17  Bank 0101     -87.45  finance-mcp    consulting             Office/Other                                   ZZZ MYSTERY VENDOR  g-bank-m
+2026-09-15  Bank 0101  -1,500.00  finance-mcp       general                  Payroll                     WIDGET PAYROLL DES:PAYROLL ID:77  g-bank-p
+2026-09-12  Bank 0101     159.00  finance-mcp      transfer                 Transfer                             PAYPAL DES:TRANSFER ID:8  g-bank-p
+2026-09-10  Bank 0101  -2,500.00  finance-mcp    owner_draw               Owner Draw  Online Banking transfer to CHK 0000 Confirmation# 1  g-bank-d
+2026-09-05  Bank 0101   4,000.00  finance-mcp    consulting     Revenue - Consulting                  SAMPLE CLIENT LLC DES:PAYMENTS ID:9  g-bank-c
+2026-09-04  Bank 0101     -49.20  finance-mcp        branda  Payment Processing Fees              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002  g-bank-p
+2026-09-03  Bank 0101   2,433.15  finance-mcp        branda        Revenue - Hosting              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001  g-bank-p
+2026-09-01  Bank 0101  -2,100.00  finance-mcp    owner_draw               Owner Draw                  FAKE MORTGAGE SERVICER DES:MTG PYMT  g-bank-m
+2026-08-28  Bank 0101     -16.00  finance-mcp       general         Bank & Card Fees                              Monthly Maintenance Fee  g-bank-f
+2026-08-25  Bank 0101     -75.00  finance-mcp      transfer                 Transfer                      SAMPLE CARD DES:ONLINE PMT ID:1  g-bank-c
+2026-08-21  Bank 0101    -256.00  finance-mcp      transfer                 Transfer                      CHARGE CARD CO DES:ACH PMT ID:6  g-bank-c
+2026-08-20  Bank 0101    -388.00  finance-mcp      transfer                 Transfer                         SAMPLE REWARDS DES:EPAY ID:5  g-bank-r
+2026-08-17  Bank 0101     -84.45  finance-mcp       general             Office/Other                                   ZZZ MYSTERY VENDOR  g-bank-m
+2026-08-15  Bank 0101  -1,500.00  finance-mcp       general                  Payroll                     WIDGET PAYROLL DES:PAYROLL ID:77  g-bank-p
+2026-08-12  Bank 0101     158.00  finance-mcp      transfer                 Transfer                             PAYPAL DES:TRANSFER ID:8  g-bank-p
+2026-08-10  Bank 0101  -2,500.00  finance-mcp    owner_draw               Owner Draw  Online Banking transfer to CHK 0000 Confirmation# 1  g-bank-d
+2026-08-05  Bank 0101   4,000.00  finance-mcp    consulting     Revenue - Consulting                  SAMPLE CLIENT LLC DES:PAYMENTS ID:9  g-bank-c
+2026-08-04  Bank 0101     -48.20  finance-mcp        branda  Payment Processing Fees              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002  g-bank-p
+2026-08-03  Bank 0101   2,396.15  finance-mcp        branda        Revenue - Hosting              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001  g-bank-p
+2026-08-01  Bank 0101  -2,100.00  finance-mcp    owner_draw               Owner Draw                  FAKE MORTGAGE SERVICER DES:MTG PYMT  g-bank-m
+2026-07-28  Bank 0101     -16.00  finance-mcp       general         Bank & Card Fees                              Monthly Maintenance Fee  g-bank-f
+2026-07-25  Bank 0101     -75.00  finance-mcp      transfer                 Transfer                      SAMPLE CARD DES:ONLINE PMT ID:1  g-bank-c
+2026-07-21  Bank 0101    -249.00  finance-mcp      transfer                 Transfer                      CHARGE CARD CO DES:ACH PMT ID:6  g-bank-c
+2026-07-20  Bank 0101    -377.00  finance-mcp      transfer                 Transfer                         SAMPLE REWARDS DES:EPAY ID:5  g-bank-r
+2026-07-17  Bank 0101     -81.45  finance-mcp       general             Office/Other                                   ZZZ MYSTERY VENDOR  g-bank-m
+2026-07-15  Bank 0101  -1,500.00  finance-mcp       general                  Payroll                     WIDGET PAYROLL DES:PAYROLL ID:77  g-bank-p
+2026-07-12  Bank 0101     157.00  finance-mcp      transfer                 Transfer                             PAYPAL DES:TRANSFER ID:8  g-bank-p
+2026-07-10  Bank 0101  -2,500.00  finance-mcp    owner_draw               Owner Draw  Online Banking transfer to CHK 0000 Confirmation# 1  g-bank-d
+2026-07-05  Bank 0101   4,000.00  finance-mcp    consulting     Revenue - Consulting                  SAMPLE CLIENT LLC DES:PAYMENTS ID:9  g-bank-c
+2026-07-04  Bank 0101     -47.20  finance-mcp        branda  Payment Processing Fees              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0002  g-bank-p
+2026-07-03  Bank 0101   2,359.15  finance-mcp        branda        Revenue - Hosting              EXAMPLE PAYMENTS DES:FUNDS DISB ID:0001  g-bank-p
+2026-07-01  Bank 0101  -2,100.00  finance-mcp    owner_draw               Owner Draw                  FAKE MORTGAGE SERVICER DES:MTG PYMT  g-bank-m
+2026-06-28  Bank 0101     -16.00  finance-mcp       general         Bank & Card Fees                              Monthly Maintenance Fee  g-bank-f
+2026-06-21  Bank 0101    -242.00  finance-mcp      transfer                 Transfer                      CHARGE CARD CO DES:ACH PMT ID:6  g-bank-c
+2026-06-20  Bank 0101    -366.00  finance-mcp      transfer                 Transfer                         SAMPLE REWARDS DES:EPAY ID:5  g-bank-r
+--- stderr
+40 shown of 103

@@ -1,0 +1,29 @@
+# Private data: never commit. scripts/privacy_scan.sh checks the tree before publishing.
+data/
+exports/
+sync/inbox/
+*.db
+*.db-*
+*.db.bak*
+*.sqlite*
+*.key
+*.secret
+*.pem
+id_rsa*
+.env
+.env.*
+*.log
+*.pid
+
+# Site config and local deny lists
+config/local.toml
+config/*.local.*
+
+# Tooling
+.venv
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+web/node_modules
