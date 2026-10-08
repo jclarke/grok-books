@@ -131,6 +131,8 @@ def _disabled_feature_route() -> str | None:
         path.startswith(("/api/whmcs/", "/api/margins/", "/export/whmcs/")) or path in ("/api/whmcs", "/api/margins")
     ):
         return "WHMCS integration is disabled"
+    if not cfg.stripe_enabled and (path.startswith(("/api/stripe/", "/export/stripe/")) or path == "/api/stripe"):
+        return "Stripe integration is disabled"
     if not cfg.margins_enabled and (path == "/api/margins" or path.startswith("/api/margins/")):
         return "Server margins are disabled"
     if not cfg.personal_enabled and (path == "/api/personal" or path.startswith(("/api/personal/", "/export/personal/"))):
@@ -171,6 +173,20 @@ def create_app() -> Flask:
     app.register_blueprint(margins_api)
     app.register_blueprint(payments_api)
     app.register_blueprint(personal_api)
+    if get_config().stripe_enabled:
+        # Imported only when on: a site without Stripe loads no Stripe code.
+        from hpbooks.stripe_api import export_csv as stripe_export_csv, stripe_api
+
+        app.register_blueprint(stripe_api)
+
+        @app.get("/export/stripe/<table>.csv")
+        def export_stripe(table):
+            text, filename = stripe_export_csv(table)
+            return Response(
+                text,
+                mimetype="text/csv",
+                headers={"Content-Disposition": f"attachment; filename={filename}"},
+            )
 
     @app.before_request
     def guard_requests():
@@ -277,7 +293,8 @@ def create_app() -> Flask:
         if first in ("api", "export", "app", "static"):
             abort(404)
         response = _spa_response("")
-        if first not in SPA_ROUTES and response.status_code == 200:
+        known = first in SPA_ROUTES or (first == "stripe" and get_config().stripe_enabled)
+        if not known and response.status_code == 200:
             response.status_code = 404
         return response
 

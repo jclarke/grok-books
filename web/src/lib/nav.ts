@@ -17,8 +17,9 @@ export interface NavItem {
   requires?: Feature[];
 }
 
-export type Feature = "whmcs" | "margins";
-export type Features = Record<Feature, boolean>;
+export type Feature = "whmcs" | "margins" | "stripe";
+/** Optional integrations (stripe) may leave their flag out entirely when off. */
+export type Features = Record<"whmcs" | "margins", boolean> & Partial<Record<Feature, boolean>>;
 
 export const NAV: NavItem[] = [
   { to: "/", label: "Dashboard", icon: "dashboard", primary: true },
@@ -40,6 +41,8 @@ export const NAV: NavItem[] = [
   { to: "/whmcs/reconciliation", label: "PayPal reconciliation", icon: "scale", section: "WHMCS", requires: ["whmcs"], paletteLabel: "WHMCS PayPal reconciliation" },
   { to: "/whmcs/margins", label: "Server margins", icon: "server", section: "WHMCS", requires: ["whmcs", "margins"], paletteLabel: "WHMCS server margins" },
   { to: "/whmcs/customers", label: "Customers", icon: "users", section: "WHMCS", requires: ["whmcs"], paletteLabel: "WHMCS customer lookup" },
+  { to: "/stripe", label: "Stripe", icon: "card", section: "Stripe", requires: ["stripe"], exact: true, paletteLabel: "Stripe revenue, fees, and payouts" },
+  { to: "/stripe/insights", label: "Insights", icon: "trendingUp", section: "Stripe", requires: ["stripe"], paletteLabel: "Stripe insights: MRR, churn, margins, and cash forecast" },
 ];
 
 /** Personal mode navigation. The business list above is unchanged. */
@@ -62,7 +65,7 @@ export const PERSONAL_NAV: NavItem[] = [
 ];
 
 export function featureOn(item: Pick<NavItem, "requires">, features: Features): boolean {
-  return (item.requires ?? []).every((feature) => features[feature]);
+  return (item.requires ?? []).every((feature) => features[feature] === true);
 }
 
 /** The navigation for a mode, without items whose features are off. */
@@ -74,6 +77,7 @@ export function navFor(mode: "business" | "personal", features: Features): NavIt
 const ROUTE_FEATURES: { prefix: string; requires: Feature[] }[] = [
   { prefix: "/whmcs/margins", requires: ["whmcs", "margins"] },
   { prefix: "/whmcs", requires: ["whmcs"] },
+  { prefix: "/stripe", requires: ["stripe"] },
 ];
 
 export function routeEnabled(pathname: string, features: Features): boolean {

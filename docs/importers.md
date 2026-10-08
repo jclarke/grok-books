@@ -25,6 +25,16 @@ bin/hpbooks accounts set-scope <id|last4|name> business
 
 The daily routine (which tools, paging, file names, balance refresh) is in [sync/README.md](../sync/README.md).
 
+Files in a `stripe/` subfolder are never read as aggregator results. With `features.stripe = true`, `bin/hpbooks import` hands them to the Stripe importer.
+
+## Stripe results (`bin/hpbooks stripe import`)
+
+Only with `features.stripe = true`. Saved Stripe connector results (`GetBalanceTransactions` as `sync/inbox/YYYY-MM-DD/stripe/<name>_N.json`, `GetPayouts` as `<name>_payouts_N.json`, optional `GetBalance` and `GetCharges`) are imported per `[[stripe.accounts]]` entry: gross revenue, refunds, disputes, and fees are posted to the Stripe account's ledger account, and payouts are paired with their bank deposits. Idempotent by Stripe id. See [stripe.md](stripe.md).
+
+```bash
+bin/hpbooks stripe import sync/inbox/2026-10-01/stripe/ [--account main] [--dry-run]
+```
+
 ## Capital One CSV (`bin/hpbooks import-capitalone`)
 
 ```bash

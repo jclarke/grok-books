@@ -71,13 +71,20 @@ Use `limit` 500.
 
    An account id the database does not know is skipped and named in the output. Register it with `accounts discover` (below), then import again.
 
-5. Refresh the WHMCS billing copy. This always runs after the Finance import, so the PayPal reconciliation uses the same day's ledger (see [Daily WHMCS sync](#daily-whmcs-sync)):
+5. Stripe, only when `features.stripe = true`: save each configured Stripe account's balance transactions and payouts from the Stripe connector into `sync/inbox/YYYY-MM-DD/stripe/` (see [Daily Stripe sync](#daily-stripe-sync)). If they were saved before step 4, the import above already read them; otherwise import them now, then check the payouts:
+
+   ```bash
+   bin/hpbooks stripe import sync/inbox/YYYY-MM-DD/stripe/
+   bin/hpbooks stripe reconcile
+   ```
+
+6. Refresh the WHMCS billing copy. This always runs after the Finance import, so the PayPal reconciliation uses the same day's ledger (see [Daily WHMCS sync](#daily-whmcs-sync)):
 
    ```bash
    bin/hpbooks whmcs sync
    ```
 
-6. Refresh posted balances from Finance. Call `finance_list_accounts` with `class` `cash`, then `liability` (and `investment` if personal investment accounts are synced). Save the results as `sync/inbox/YYYY-MM-DD/accounts/finance_list_accounts.json` (in the `accounts/` subfolder, which `import` does not read; a JSON list of the tool results is fine). For every sync-enabled account of both scopes, record that row's `current_balance` (do not use `available_balance`). On a card or loan, `current_balance` is the amount owed and is entered as a positive number. The as-of date is today, because `current_balance` is the posted balance:
+7. Refresh posted balances from Finance. Call `finance_list_accounts` with `class` `cash`, then `liability` (and `investment` if personal investment accounts are synced). Save the results as `sync/inbox/YYYY-MM-DD/accounts/finance_list_accounts.json` (in the `accounts/` subfolder, which `import` does not read; a JSON list of the tool results is fine). For every sync-enabled account of both scopes, record that row's `current_balance` (do not use `available_balance`). On a card or loan, `current_balance` is the amount owed and is entered as a positive number. The as-of date is today, because `current_balance` is the posted balance:
 
    ```bash
    bin/hpbooks balances set <last4-or-label> --balance <current_balance> --as-of YYYY-MM-DD --source finance
@@ -87,7 +94,7 @@ Use `limit` 500.
 
    Instead of one `balances set` per personal account you can run `bin/hpbooks accounts discover sync/inbox/YYYY-MM-DD/accounts/finance_list_accounts.json --as-of YYYY-MM-DD`. It records a finance anchor for every non-excluded account in the file (skipping one already recorded with the same date and amount), registers any new account as personal, and never changes an existing account's scope.
 
-7. Look at what still needs a human:
+8. Look at what still needs a human:
 
    ```bash
    bin/hpbooks review --year YYYY
@@ -136,3 +143,62 @@ If a billing server's firewall lets in only some addresses, a tunnel can time ou
 Placeholder credit is not imported. A `tblcredit` row at or above `whmcs.placeholder_credit_cents` ($1,000,000 by default) (either sign) is skipped, and a client or invoice credit that large is stored as 0. The sync output shows `skipped_placeholder_credit=N` when anything was skipped, and the sync log records the counts under `placeholder_credit`. Because the sync is a full refresh, rows imported before this rule are removed on the next run.
 
 Nothing in the sync output, the sync log, or the audit log contains customer names, emails, or the MySQL password.
+
+## Daily Stripe sync
+
+Only when `features.stripe = true` in the config, with one `[[stripe.accounts]]` entry per Stripe account (see [docs/stripe.md](../docs/stripe.md)). hpbooks never calls Stripe here: Grok Bot reads Stripe with the Stripe connector and saves every result verbatim. Do it after the Finance pull, the same day:
+
+1. Call `list_available_accounts_or_orgs`. For each `[[stripe.accounts]]` entry, pick the `stripe_context` whose id equals its `stripe_account`, and that context's `livemode`. Use live mode for real books; never mix test and live data.
+2. For each configured account, call `stripe_api_read` with that `stripe_context` and `livemode`, `stripe_api_operation_id: "GetBalanceTransactions"`, and
+
+   ```json
+   {"limit": 100, "created": {"gte": <unix start of today minus 10 days, books time zone>, "lt": <unix start of tomorrow>}}
+   ```
+
+   Save the result verbatim as `sync/inbox/YYYY-MM-DD/stripe/<name>_1.json` (`<name>` is the entry's `name`). While `has_more` is true, call again with the same parameters plus `"starting_after": "<id of the last item in data>"` and save `<name>_2.json`, `<name>_3.json`, and so on.
+3. The same for `stripe_api_operation_id: "GetPayouts"` with `{"limit": 100, "created": {...same...}}` → `<name>_payouts_1.json`, `<name>_payouts_2.json`, … Optionally call `GetBalance` and save `<name>_balance.json`.
+4. Never call `stripe_api_write` or any tool that changes Stripe.
+5. Import and check the payouts:
+
+   ```bash
+   bin/hpbooks import sync/inbox/YYYY-MM-DD/        # reads stripe/ too when Stripe is on
+   # or: bin/hpbooks stripe import sync/inbox/YYYY-MM-DD/stripe/
+   bin/hpbooks stripe reconcile                     # payouts vs bank deposits, and bank-only deposits
+   ```
+
+You may add a `_query` object to each saved file (`stripe_account`, `livemode`, `created_gte`, `created_lt`); the import refuses a file whose `stripe_account` is not the entry's `stripe_account`, and any file marked `livemode: false` (in `_query` or in the results). The import is idempotent: the overlapping 10-day window updates rows in place (a `pending` charge that became `available` is updated, not duplicated).
+
+### Stripe insights (billing objects)
+
+For the business analytics (`bin/hpbooks stripe metrics`; see [docs/stripe.md](../docs/stripe.md#business-analytics)), pull the billing objects too, with the same `stripe_context`, `livemode`, and read-only `stripe_api_read`, `"limit": 100`, paging with `"starting_after": "<id of the last item in data>"` while `has_more` is true, each page saved verbatim with a running number:
+
+| `stripe_api_operation_id` | Daily parameters | Save as |
+| --- | --- | --- |
+| `GetSubscriptions` | `{"limit": 100, "status": "all", "expand": ["data.discounts", "data.items.data.discounts"]}` (every page; statuses change) | `stripe/<name>_subscriptions_<n>.json` |
+| `GetInvoices` | `{"limit": 100, "created": {...same 10-day window...}}` | `stripe/<name>_invoices_<n>.json` |
+| `GetInvoicePayments` | `{"limit": 100}` (or `"invoice": "in_…"` for each new invoice) | `stripe/<name>_invoice_payments_<n>.json` |
+| `GetCharges` | `{"limit": 100, "created": {...same...}}` | `stripe/<name>_charges_<n>.json` |
+| `GetCustomers` | `{"limit": 100}` (weekly is enough) | `stripe/<name>_customers_<n>.json` |
+| `GetCoupons` | `{"limit": 100}` (every page; small) | `stripe/<name>_coupons_<n>.json` |
+| `GetPrices`, `GetProducts` | `{"limit": 100}` (weekly is enough) | `stripe/<name>_prices_<n>.json`, `stripe/<name>_products_<n>.json` |
+
+Ask for the discounts expanded, `"expand": ["data.discounts", "data.items.data.discounts"]`, and pull `GetCoupons` in full every time. An expanded discount still names its coupon by id only (`"source": {"type": "coupon", "coupon": "<coupon id>"}`), and the import looks the terms up in the coupons file. Without the expand, or for a coupon missing from the coupons file, MRR and the forecast take the discounted share of the subscription's most recent paid invoice, (line amount − discount) / line amount, and say so in the approximations.
+
+Backfill once, into `sync/inbox/backfill-stripe/stripe/`: subscriptions with `status: all` in full; invoices and charges month by month by `created` from the books' start date (as in the payout backfill below); invoice payments, customers, prices, products, and coupons in full. Then `bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/` and `bin/hpbooks stripe metrics`.
+
+The import keeps only the fields the metrics need and then **rewrites the customers, invoices, charges, subscriptions, and coupons files in place** to those fields (no names, emails, phones, addresses, billing details, receipt or invoice URLs, descriptions, or metadata stay on disk). Use `--keep-raw` to skip that. A file from an older pull never overwrites newer data, so re-running an old folder is safe. Never call `stripe_api_write`.
+
+### First Stripe load (backfill payouts)
+
+Pull everything from the date the books start, one calendar month per window, so payouts reconcile against the bank history you already imported:
+
+1. For each `[[stripe.accounts]]` entry and each month from the books' start date to today: `GetBalanceTransactions` **and** `GetPayouts` with `{"limit": 100, "created": {"gte": <unix start of the 1st of the month>, "lt": <unix start of the 1st of the next month>}}` (books time zone), paging each window with `"starting_after": "<id of the last item in data>"` while `has_more` is true.
+2. Save the pages with one running number per account across all months: `sync/inbox/backfill-stripe/stripe/<name>_<n>.json` for balance transactions and `<name>_payouts_<n>.json` for payouts.
+3. Import and reconcile:
+
+   ```bash
+   bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/
+   bin/hpbooks stripe reconcile --from <books start> --rows
+   ```
+
+The import is idempotent, so overlapping windows and a second run (for example older months pulled later) are fine. Payouts are matched by their own arrival date, never today's. Expect **matched** for payouts whose deposit is in the bank history, **no_bank_history** for payouts that arrived before the first imported row of their bank account(s) (they match once older bank history is imported), and **in_transit** only for the last few days. Stripe-looking deposits the rules booked as revenue before Stripe was on pair automatically when their payout is imported; anything still under **bank only** needs a look. Details: [docs/stripe.md](../docs/stripe.md#backfill-payouts).

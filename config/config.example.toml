@@ -26,6 +26,7 @@ business = true    # business mode UI/CLI (ledger, P&L, rules, reports)
 personal = true    # personal mode UI/CLI (`hpbooks personal`, /personal pages)
                    # at least one of business / personal must be true
 whmcs = false      # WHMCS billing import, reports, and PayPal reconciliation
+stripe = false     # Stripe balance import (revenue, refunds, fees), payout reconciliation, and business analytics
 # margins = false  # server margins; defaults to the whmcs value and needs whmcs = true
 
 # --- businesses ---------------------------------------------------------------------
@@ -184,6 +185,52 @@ paypal_account_role = "paypal"
 # account_role = "operating"
 # label = "Card processor deposits"
 # match = "stripe"
+
+# --- Stripe (only active when features.stripe = true) --------------------------------------
+# Each [[stripe.accounts]] entry is booked as a business cash account (stripe-<name>): charges
+# post gross revenue and fees, refunds and disputes reduce revenue, payouts are transfers paired
+# with the bank deposit. Grok Bot saves the Stripe connector results to
+# sync/inbox/YYYY-MM-DD/stripe/<name>_N.json and <name>_payouts_N.json. See docs/stripe.md.
+# [stripe]
+# fee_category = "Payment Processing Fees"   # where Stripe fees go (must be an expense category)
+# payout_match = "(?i)stripe"                # regex a bank deposit's text must match to pair with a payout
+# payout_window_days = 5                     # 0 to 31: bank deposit may land 1 day before to N days after the payout's arrival date
+# books_currency = "usd"                     # rows in another currency are stored but not posted
+# timezone = "America/New_York"              # Stripe timestamps become ledger dates in this zone
+# secret = "stripe.secret"                   # optional direct-API mode: restricted read-only key in data/
+# capital_fee_category = "Interest"          # Stripe Capital fee (default "Interest" if that category exists, else fee_category)
+#
+# [[stripe.accounts]]
+# name = "main"                  # lowercase letters, digits, -: file prefix in sync/inbox/.../stripe/<name>_N.json and CLI --account
+# business = "general"           # business slug that gets the revenue and fees
+# stripe_account = "acct_..."    # optional: the Stripe account id, used to check files belong here
+# label = "Stripe"               # optional display name (default "Stripe <name>")
+# currency = "usd"               # settlement currency of this Stripe balance (default "usd")
+# revenue_category = "Revenue - Sales"   # default: the business's revenue_category, else the first revenue category
+# payout_account = "0001"        # optional: last 4 or id of the bank account payouts land in (default: any business cash account)
+# secret = "stripe_main.secret"  # optional: this account's own key file for `stripe sync`
+#
+# Stripe Capital: one entry per financing, from the offer / loan agreement (Dashboard > Capital).
+# Repayments are split pro rata into principal (a transfer to the loan account stripe-<name>-capital)
+# and fee (capital_fee_category, in the P&L). Without an entry repayments stay whole transfers.
+# [[stripe.capital]]
+# account = "main"               # a [[stripe.accounts]] name
+# financing = "flxln_..."        # optional: the id in "... pay down flex loan flxln_..."; omitted = this account's default
+# principal = 20000.00           # amount received
+# fee = 2000.00                  # the flat fee; or fee_rate = 0.10 (fee = principal x rate); exactly one of the two
+# label = "Capital loan 2026"       # optional display name
+# opening_principal = 12000.00   # optional: principal still owed on start_date when the proceeds predate your history
+# start_date = "2026-01-01"      # required with opening_principal
+
+# Business analytics (`hpbooks stripe metrics`, /api/stripe/metrics). All optional. See docs/stripe.md.
+# [stripe.metrics]
+# cogs = [{ category = "Hosting & Infrastructure", products = ["prod_..."] }]  # spend charged to these Stripe products
+# cogs_categories = ["Contractors"]   # spend spread over every product by revenue share
+# cac = 250.00                        # acquisition cost per new customer (for payback months)
+# cac_category = "Advertising"        # or: that category's 12-month spend / new customers
+# spike_factor = 2.0                  # refund spike: month's rate > factor x the 6-month median ...
+# spike_min = 50.00                   # ... and refunds of at least this much
+# forecast_days = 90                  # cash forecast horizon, 7 to 365
 
 # --- updates --------------------------------------------------------------------------
 [update]

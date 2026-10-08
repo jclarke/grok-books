@@ -18,6 +18,11 @@ import type {
   Rule,
   RulePreview,
   SearchResults,
+  StripeMetrics,
+  StripeMetricsSection,
+  StripeMetricsSectionResponse,
+  StripePayouts,
+  StripeSummary,
   TableReport,
   TxnDetail,
   TxnPage,
@@ -55,6 +60,7 @@ export const keys = {
   search: (q: string, mode = "business") => ["search", q, mode] as const,
   whmcs: (name: string, p: Params = {}) => ["whmcs", name, p] as const,
   margins: ["margins"] as const,
+  stripe: (name: string, p: Params = {}) => ["stripe", name, p] as const,
   payments: (mode: "business" | "personal") => ["payments", mode] as const,
 };
 
@@ -220,6 +226,41 @@ export function useMargins() {
     placeholderData: keepPreviousData,
     enabled: getSiteConfig().features.margins,
   });
+}
+
+// --- Stripe (read-only; refreshed by `hpbooks stripe import`) -------------------
+
+/** Stripe endpoints answer 404 when the integration is off; never ask them. */
+function stripeOn(): boolean {
+  return getSiteConfig().features.stripe === true;
+}
+
+function stripeQuery<T>(name: string, path: string, p: Params = {}, enabled = true) {
+  return useQuery({
+    queryKey: keys.stripe(name, p),
+    queryFn: ({ signal }) => apiGet<T>(path, p, { signal }),
+    placeholderData: keepPreviousData,
+    enabled: enabled && stripeOn(),
+  });
+}
+
+/** Totals, per-account figures, months, and payout match counts. Pass `enabled: false` to skip the request. */
+export function useStripeSummary(p: Params, enabled = true) {
+  return stripeQuery<StripeSummary>("summary", "/stripe/summary", p, enabled);
+}
+
+export function useStripePayouts(p: Params, enabled = true) {
+  return stripeQuery<StripePayouts>("payouts", "/stripe/payouts", p, enabled);
+}
+
+/** Business analytics (MRR, churn, cohorts, margins, fees, Capital, LTV, recovery, forecast): every section in one call. */
+export function useStripeMetrics(p: Params, enabled = true) {
+  return stripeQuery<StripeMetrics>("metrics", "/stripe/metrics", p, enabled);
+}
+
+/** One metrics section plus the summary KPIs (the dashboard card asks for "mrr"). */
+export function useStripeMetricsSection<S extends StripeMetricsSection>(section: S, p: Params, enabled = true) {
+  return stripeQuery<StripeMetricsSectionResponse<S>>(`metrics-${section}`, `/stripe/metrics/${section}`, p, enabled);
 }
 
 // --- Card and loan payments (both modes; the mode is always named, never inferred from the path) ---

@@ -29,6 +29,8 @@ Grok Bot clones the repository, creates the database key (it never shows the key
 | Ask Grok Bot | What happens |
 |---|---|
 | "Sync my books" | Pulls the last 10 days for every linked account through the Finance connector, imports it (re-imports never duplicate), and refreshes balances. See [sync/README.md](sync/README.md). |
+| "Sync Stripe" | Pulls balance transactions and payouts from the Stripe connector for each configured account, imports them, and matches payouts to bank deposits. Only when Stripe is turned on. See [docs/stripe.md](docs/stripe.md). |
+| "Stripe insights" | Pulls subscriptions, invoices, invoice payments, charges, customers, prices, and products (read-only), imports them keeping only the fields the metrics need, and reports MRR and its movement, churn, NRR, cohorts, true margin per product, fee rates and ACH savings, the real APR of Stripe Capital, LTV, customer concentration, failed-payment recovery, refund spikes, and a 90-day cash forecast. Only when Stripe is turned on. See [docs/stripe.md](docs/stripe.md#business-analytics). |
 | "Show me my P&L for September" | Profit and loss by month or by business, with owner draws below the line. |
 | "What's uncategorized?" | The review queue, largest first, with suggestions. A fix can be saved as a rule so the same merchant is handled next time. |
 | "When are my cards due?" | Minimum payments, due dates, and APRs for every card and loan, soonest first. See [docs/payment-tracking.md](docs/payment-tracking.md). |
@@ -74,6 +76,7 @@ Every screenshot below comes from a demo ledger with invented data ("Northwind H
 - **Personal mode**: separate categories and rules, transfer pairing, budgets with rollover, recurring and subscription detection, bills, goals, net worth history, monthly summary. See [docs/personal-mode.md](docs/personal-mode.md).
 - **Several businesses** in one ledger, each a tag with its own label and colour.
 - **Optional WHMCS integration** for hosting businesses: revenue, MRR, churn, collections, gateway reconciliation, server margins. See [docs/whmcs.md](docs/whmcs.md).
+- **Optional Stripe integration**: gross revenue, refunds, disputes, and Stripe fees booked per business from Stripe balance transactions, with each payout matched to its bank deposit so revenue counts once. See [docs/stripe.md](docs/stripe.md).
 - **Optional remote access** over Tailscale with a host allowlist and passphrase sign-in.
 - Audit log of every edit.
 
@@ -148,6 +151,10 @@ You can also edit `data/allowed-hosts` directly (one host per line, mode 600). E
 
 Set `whmcs = true` under `[features]` and fill in `[whmcs]` and one `[[whmcs.brands]]` per install in `config/local.toml`, put the read-only MySQL password in `data/whmcs.secret` (mode 600), then `bin/hpbooks whmcs sync`. Setup, grants, and report definitions: [docs/whmcs.md](docs/whmcs.md).
 
+## Stripe (optional)
+
+Set `stripe = true` under `[features]` and add one `[[stripe.accounts]]` per Stripe account (its name and business, and optionally the `acct_` id) in `config/local.toml`. Grok Bot saves the Stripe connector's balance transactions and payouts to `sync/inbox/YYYY-MM-DD/stripe/`, and `bin/hpbooks import sync/inbox/YYYY-MM-DD/` books them: gross revenue and fees per business, refunds and disputes against revenue, payouts as transfers paired with the bank deposits, and Stripe Capital as a loan (add its principal and fee as `[[stripe.capital]]` so each repayment splits into principal and interest). Check payouts with `bin/hpbooks stripe reconcile`. With subscriptions, coupons, invoices, and charges pulled too, `bin/hpbooks stripe metrics` (and the **Stripe insights** page, `/stripe/insights`) reports MRR, churn, cohorts, true margin per product, fee rates, Capital's real APR, LTV, concentration, failed-payment recovery, refund trends, and a cash forecast; the import keeps only the fields those need and scrubs the saved files to them. Booking rules, the connector steps, the payout backfill, and the optional direct-API mode: [docs/stripe.md](docs/stripe.md).
+
 ## Updates
 
 Installs follow the public snapshot repository (`[update]` in the config: `repo`, `remote`, `branch`; defaults `jclarke/grok-books`, `public`, `main`). A git remote with the `remote` name is used when the clone has one; otherwise the repository URL.
@@ -195,6 +202,7 @@ If an assistant (Claude Code or similar) sets this up for you, give it this chec
 - [docs/importers.md](docs/importers.md): every import path
 - [docs/personal-mode.md](docs/personal-mode.md), [docs/balances-vendors.md](docs/balances-vendors.md), [docs/manual-balances.md](docs/manual-balances.md), [docs/payment-tracking.md](docs/payment-tracking.md)
 - [docs/whmcs.md](docs/whmcs.md): the optional billing integration
+- [docs/stripe.md](docs/stripe.md): the optional Stripe integration
 - [docs/update-routine.md](docs/update-routine.md): a daily update check that only speaks up when there is one
 - [SECURITY.md](SECURITY.md): threat model and protections
 - [web/README.md](web/README.md): front-end code and dev server

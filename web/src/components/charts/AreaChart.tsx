@@ -20,10 +20,12 @@ export interface AreaChartProps {
   markers?: { date: string; label: string }[];
   /** "month" labels points by month (for month-end series). */
   axis?: "day" | "month";
+  /** One point called out with a ring and a label (the forecast's low point). */
+  highlight?: { date: string; label: string };
 }
 
 /** Balance over time as a filled line, with an optional horizontal threshold (the reserve). */
-export function AreaChart({ points, label, tone = "net", threshold, height = 240, valueLabel = "Balance", markers = [], axis = "day" }: AreaChartProps) {
+export function AreaChart({ points, label, tone = "net", threshold, height = 240, valueLabel = "Balance", markers = [], axis = "day", highlight }: AreaChartProps) {
   const axisLabel = (date: string) => (axis === "month" ? formatMonth(date.slice(0, 7)) : formatDate(date, { year: false }));
   const titleLabel = (date: string) => (axis === "month" ? formatMonth(date.slice(0, 7)) : formatDate(date));
   const { ref, width } = useMeasure<HTMLDivElement>();
@@ -75,6 +77,20 @@ export function AreaChart({ points, label, tone = "net", threshold, height = 240
             if (index === undefined) return null;
             return <circle key={`${marker.date}-${marker.label}`} className={`chart-marker tone-${tone}`} cx={x(index)} cy={y(points[index].value)} r={2.5} />;
           })}
+          {highlight && markerIndex.has(highlight.date) ? (() => {
+            const index = markerIndex.get(highlight.date) as number;
+            const hx = x(index);
+            const hy = y(points[index].value);
+            const anchor = index > points.length * 0.7 ? "end" : index < points.length * 0.3 ? "start" : "middle";
+            return (
+              <g className="chart-highlight">
+                <circle className={`chart-highlight__ring tone-${tone}`} cx={hx} cy={hy} r={6} />
+                <text className="chart-highlight__label" x={hx} y={hy > pad.t + 24 ? hy - 12 : hy + 20} textAnchor={anchor}>
+                  {highlight.label}
+                </text>
+              </g>
+            );
+          })() : null}
           {points.map((p, i) =>
             i % labelEvery === 0 || i === points.length - 1 ? (
               <text key={p.date} className="chart-axis" x={x(i)} y={height - 8} textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"}>

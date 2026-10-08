@@ -322,6 +322,9 @@ def classify_ids(conn, txn_ids: list[str], *, overwrite_non_manual: bool) -> int
         )
         if not txn:
             continue
+        if txn.get("source") == "stripe":
+            # Booked by the Stripe import from the Stripe type, not by text rules.
+            continue
         decision = decide(txn, rules)
         result = write_classification(
             conn,
@@ -373,6 +376,11 @@ def reclassify(conn, *, txn_ids: list[str] | None = None) -> int:
         txn_ids = kept
     wrote = classify_ids(conn, txn_ids, overwrite_non_manual=True)
     wrote += match_transfers(conn)
+    if get_config().stripe_enabled:
+        # Rules just re-tagged paired Stripe payout deposits; pair them again.
+        from hpbooks.stripe import after_ledger_change
+
+        after_ledger_change(conn)
     return wrote
 
 
