@@ -914,3 +914,92 @@ export interface PaymentUpdate {
   paid_on?: string;
   unverified?: boolean;
 }
+
+// --- Stripe (read-only; refreshed by `hpbooks stripe import`) ---------------------
+
+/** Money figures shared by Stripe accounts, totals, and months. Refunds, disputes, and fees are positive amounts that reduce revenue. */
+export interface StripeFigures {
+  gross_cents: number;
+  refunds_cents: number;
+  disputes_cents: number;
+  fees_cents: number;
+  net_revenue_cents: number;
+  /** Fees as a percent of gross; null when there is no gross. */
+  fee_pct: number | null;
+  capital_repayments_cents: number;
+  capital_proceeds_cents: number;
+  payouts_cents: number;
+}
+
+export interface StripeAccountSummary extends StripeFigures {
+  name: string;
+  label: string;
+  business: string;
+  currency: string;
+  ledger_account_id: string;
+  needs_review: number;
+  skipped_currency: number;
+}
+
+export interface StripeMonth extends StripeFigures {
+  month: string;
+}
+
+export type StripePayoutStatus = "matched" | "in_transit" | "unmatched" | "ambiguous" | "conflict" | "failed" | "skipped";
+
+export interface StripeSummary {
+  ok: true;
+  ready: boolean;
+  start: string;
+  end: string;
+  business: string;
+  accounts: StripeAccountSummary[];
+  totals: StripeFigures & Partial<Pick<StripeAccountSummary, "needs_review" | "skipped_currency">>;
+  months: StripeMonth[];
+  payouts: Record<StripePayoutStatus, number>;
+  /** unmatched + ambiguous + conflict */
+  open_payouts: number;
+  bank_only: number;
+}
+
+export interface StripeBankDeposit {
+  txn_id: string;
+  date: string;
+  account_id: string;
+  account_label: string;
+  last4: string;
+  amount_cents: number;
+  name: string;
+  business_tag: string;
+  category: string;
+}
+
+export interface StripePayoutRow {
+  account: string;
+  account_label: string;
+  id: string;
+  amount_cents: number;
+  currency: string;
+  created: string;
+  arrival_date: string;
+  stripe_status: string | null;
+  match_status: StripePayoutStatus;
+  match_note: string;
+  bank: StripeBankDeposit | null;
+}
+
+export interface StripePayouts {
+  ok: true;
+  ready: boolean;
+  start: string;
+  end: string;
+  rows: StripePayoutRow[];
+  bank_only: StripeBankDeposit[];
+  totals: {
+    count: number;
+    amount_cents: number;
+    by_status: Record<StripePayoutStatus, { count: number; amount_cents: number }>;
+    bank_only_count: number;
+    bank_only_cents: number;
+  };
+}

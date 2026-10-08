@@ -186,3 +186,23 @@ gateway = "cardgw"
 account_role = "operating"
 label = "Bank card settlements"
 match = "example payments|card settlement"
+
+# Stripe stays off here (features.stripe defaults to false); tests/test_stripe.py
+# turns it on with override(stripe_enabled=True).
+[stripe]
+fee_category = "Payment Processing Fees"
+payout_match = "(?i)stripe"
+payout_window_days = 5
+
+[[stripe.accounts]]
+name = "main"
+business = "branda"
+stripe_account = "acct_TEST000001"
+label = "Stripe"
+
+[[stripe.accounts]]
+name = "consult"
+business = "consulting"
+stripe_account = "acct_TEST000002"
+label = "Stripe Consulting"
+payout_account = "0101"

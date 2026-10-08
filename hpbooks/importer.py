@@ -13,6 +13,7 @@ from pathlib import Path
 
 from hpbooks.capitalone import supersede_matching_csv
 from hpbooks.classify import classify_new, match_transfers, write_classification
+from hpbooks.config import get_config
 from hpbooks.db import HpbooksError, audit, now_iso, to_cents
 from hpbooks.scope import account_scope, has_scope, known_account_ids
 from hpbooks.scope import txn_scope as account_scope_of_txn
@@ -32,23 +33,32 @@ COMPARE_FIELDS = (
 )
 
 
-def expand_inputs(items: list[str]) -> list[Path]:
+def _is_stripe_file(path: Path) -> bool:
+    """Stripe connector results (<day>/stripe/*.json) are never Finance results."""
+    return path.parent.name == "stripe"
+
+
+def expand_inputs(items: list[str], *, allow_empty: bool = False) -> list[Path]:
+    """Finance result files among the inputs. Files in a stripe/ folder are left out;
+    allow_empty is for a run whose only files are Stripe results."""
     found: list[Path] = []
     for item in items:
         path = Path(item)
         if path.is_dir():
             # Personal pulls sit in <day>/personal/ next to the business files.
             matches = sorted(path.glob("*.json")) + sorted(path.glob("personal/*.json"))
-            if not matches:
+            matches = [match for match in matches if not _is_stripe_file(match)]
+            if not matches and not allow_empty:
                 raise HpbooksError(f"no json files in {item}")
             found.extend(matches)
         elif path.is_file():
-            found.append(path)
+            if not _is_stripe_file(path):
+                found.append(path)
         else:
             matches = sorted(glob.glob(item))
             if not matches:
                 raise HpbooksError(f"no such file or pattern: {item}")
-            found.extend(Path(match) for match in matches if Path(match).is_file())
+            found.extend(Path(match) for match in matches if Path(match).is_file() and not _is_stripe_file(Path(match)))
     ordered: list[Path] = []
     seen: set[str] = set()
     for path in found:
@@ -57,7 +67,7 @@ def expand_inputs(items: list[str]) -> list[Path]:
             continue
         seen.add(key)
         ordered.append(path)
-    if not ordered:
+    if not ordered and not allow_empty:
         raise HpbooksError("nothing to import")
     return ordered
 
@@ -473,6 +483,11 @@ def import_file(conn, path: Path, date_from: str | None = None, date_to: str | N
                 effective_to,
             )
     match_transfers(conn)
+    if get_config().stripe_enabled:
+        # A bank deposit can arrive after its Stripe payout file (or the reverse).
+        from hpbooks.stripe import after_ledger_change
+
+        after_ledger_change(conn)
     # A business draw can arrive after its personal deposit (or the reverse), so
     # personal pairing reruns after any import once personal accounts exist.
     if has_scope(conn) and conn.execute("SELECT 1 FROM accounts WHERE scope = 'personal' LIMIT 1").fetchone():
@@ -504,8 +519,10 @@ def import_file(conn, path: Path, date_from: str | None = None, date_to: str | N
     return stats
 
 
-def import_paths(conn, items: list[str], date_from: str | None = None, date_to: str | None = None) -> list[dict]:
+def import_paths(
+    conn, items: list[str], date_from: str | None = None, date_to: str | None = None, *, allow_empty: bool = False
+) -> list[dict]:
     summaries = []
-    for path in expand_inputs(items):
+    for path in expand_inputs(items, allow_empty=allow_empty):
         summaries.append(import_file(conn, path, date_from, date_to))
     return summaries

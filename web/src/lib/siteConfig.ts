@@ -36,6 +36,8 @@ export interface BankSide {
 export interface SiteFeatures {
   whmcs: boolean;
   margins: boolean;
+  /** Stripe revenue and payouts (features.stripe). Present only when on, so payloads from before it existed read the same. */
+  stripe?: boolean;
   /** Business / personal mode installed (features.business / features.personal). At least one is on. */
   business: boolean;
   personal: boolean;
@@ -52,6 +54,14 @@ export interface SiteConfig {
   operating_account: AccountConfig | null;
   whmcs_brands: string[];
   whmcs_bank_sides: BankSide[];
+  /** Stripe accounts from the signed-in config; [] when Stripe is off. */
+  stripe_accounts: StripeAccountConfig[];
+}
+
+export interface StripeAccountConfig {
+  name: string;
+  label: string;
+  business: string;
 }
 
 /** The raw /api/config payload; every key may be missing. */
@@ -104,6 +114,7 @@ export function normalizeSiteConfig(raw: RawSiteConfig | null | undefined, sessi
     business: cfg.features?.business !== false || !personal,
     personal,
   };
+  if (cfg.features?.stripe === true) features.stripe = true;
 
   let businesses: BusinessConfig[] = [];
   if (Array.isArray(cfg.businesses)) {
@@ -139,6 +150,12 @@ export function normalizeSiteConfig(raw: RawSiteConfig | null | undefined, sessi
     ? cfg.whmcs_bank_sides.filter((side): side is BankSide => Boolean(side) && typeof side.gateway === "string" && typeof side.label === "string")
     : [];
 
+  const stripeAccounts = features.stripe && Array.isArray(cfg.stripe_accounts)
+    ? cfg.stripe_accounts
+        .filter((row): row is StripeAccountConfig => Boolean(row) && typeof row.name === "string" && row.name.length > 0)
+        .map((row) => ({ name: row.name, label: str(row.label, row.name), business: str(row.business, "") }))
+    : [];
+
   return {
     product,
     company: str(cfg.company, "My Business"),
@@ -150,6 +167,7 @@ export function normalizeSiteConfig(raw: RawSiteConfig | null | undefined, sessi
     operating_account: normalizeAccount(cfg.operating_account),
     whmcs_brands: brands,
     whmcs_bank_sides: sides,
+    stripe_accounts: stripeAccounts,
   };
 }
 

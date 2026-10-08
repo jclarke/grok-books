@@ -6,7 +6,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from hpbooks.config import BUSINESS_DISABLED, PERSONAL_DISABLED, WHMCS_DISABLED, get_config
+from hpbooks.config import BUSINESS_DISABLED, PERSONAL_DISABLED, STRIPE_DISABLED, WHMCS_DISABLED, get_config
 from hpbooks.db import short_id
 from hpbooks.db import HpbooksError, connect, init_db
 from hpbooks.reports import BUSINESS_FILTERS
@@ -30,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
 # web, web-passphrase, personal, and update work in either mode.
 BUSINESS_COMMANDS = frozenset({
     "seed-rules", "reclassify", "classify", "review", "pnl", "reconcile", "txns", "rules",
-    "transfers", "balances", "vendors", "seedcheck", "whmcs", "margins",
+    "transfers", "balances", "vendors", "seedcheck", "whmcs", "margins", "stripe",
     "import-capitalone", "verify-capitalone",
 })
 
@@ -44,6 +44,8 @@ def _disabled_feature(cmd: str) -> str | None:
         return BUSINESS_DISABLED
     if cmd in ("whmcs", "margins") and not cfg.whmcs_enabled:
         return WHMCS_DISABLED
+    if cmd == "stripe" and not cfg.stripe_enabled:
+        return STRIPE_DISABLED
     if cmd == "margins" and not cfg.margins_enabled:
         return "server margins are disabled (set features.margins = true in config/local.toml)"
     return None
@@ -279,6 +281,33 @@ def build_parser() -> argparse.ArgumentParser:
             report.add_argument("--gateways", action="store_true", help="show totals per gateway")
         report.set_defaults(func=cmd_whmcs_report, report=name)
 
+    stripe_on = get_config().stripe_enabled
+    stripe_names = ", ".join(a.name for a in get_config().stripe.accounts) or "a configured account"
+    stripe = sub.add_parser("stripe", help="Stripe balance import, payouts, and reconciliation" + ("" if stripe_on else " (disabled)"))
+    stripe_sub = stripe.add_subparsers(dest="stripe_cmd", required=True)
+    stripe_import = stripe_sub.add_parser("import", help="import saved Stripe results (stripe/*.json files, directories, or globs)")
+    stripe_import.add_argument("paths", nargs="+")
+    stripe_import.add_argument("--account", help=f"{stripe_names}; default: the file name prefix (<name>_N.json)")
+    stripe_import.add_argument("--dry-run", action="store_true", help="show what would change and write nothing")
+    stripe_import.set_defaults(func=cmd_stripe_import)
+    stripe_status = stripe_sub.add_parser("status", help="per account: last import, totals this month and year, payouts, review")
+    stripe_status.add_argument("--account", help=stripe_names)
+    stripe_status.add_argument("--json", action="store_true")
+    stripe_status.set_defaults(func=cmd_stripe_status)
+    stripe_rec = stripe_sub.add_parser("reconcile", help="payouts and their bank deposits; Stripe-looking deposits with no payout")
+    stripe_rec.add_argument("--from", dest="date_from", help="YYYY-MM-DD inclusive (default Jan 1)")
+    stripe_rec.add_argument("--to", dest="date_to", help="YYYY-MM-DD inclusive (default today)")
+    stripe_rec.add_argument("--account", help=stripe_names)
+    stripe_rec.add_argument("--rows", action="store_true", help="show the match note on every payout")
+    stripe_rec.add_argument("--format", default="table", choices=("table", "csv"))
+    stripe_rec.set_defaults(func=cmd_stripe_reconcile)
+    stripe_sync = stripe_sub.add_parser("sync", help="optional: pull from the Stripe API with a restricted read-only key, then import")
+    stripe_sync.add_argument("--from", dest="date_from", help="YYYY-MM-DD (default 10 days ago)")
+    stripe_sync.add_argument("--to", dest="date_to", help="YYYY-MM-DD (default today)")
+    stripe_sync.add_argument("--account", help=stripe_names)
+    stripe_sync.add_argument("--inbox", help="inbox directory (default sync/inbox)")
+    stripe_sync.set_defaults(func=cmd_stripe_sync)
+
     margins = sub.add_parser("margins", help="server costs, the services they carry, and the margin" + ("" if get_config().margins_enabled else " (disabled)"))
     margins_sub = margins.add_subparsers(dest="margins_cmd", required=True)
     margins_seed = margins_sub.add_parser("seed", help="load servers, costs, mappings, and overhead from a JSON file (idempotent)")
@@ -352,8 +381,18 @@ def cmd_import(args) -> int:
 
     date_from = _date(args.date_from, "--from")
     date_to = _date(args.date_to, "--to")
+    stripe_paths = []
+    if get_config().stripe_enabled:
+        from hpbooks.stripe import stripe_files
+
+        stripe_paths = stripe_files(args.paths)
+    stripe_result = None
     with connect() as conn:
-        summaries = import_paths(conn, args.paths, date_from, date_to)
+        summaries = import_paths(conn, args.paths, date_from, date_to, allow_empty=bool(stripe_paths))
+        if stripe_paths:
+            from hpbooks.stripe import import_files
+
+            stripe_result = import_files(conn, stripe_paths)
     for stats in summaries:
         print(
             f"{stats['file']}: inserted={stats['inserted']} updated={stats['updated']} "
@@ -372,6 +411,8 @@ def cmd_import(args) -> int:
                     f"  unregistered account {account_id[:12]}: run `hpbooks accounts discover` or skip it",
                     file=sys.stderr,
                 )
+    if stripe_result is not None:
+        _print_stripe_import(stripe_result)
     return 0
 
 
@@ -1087,6 +1128,94 @@ def _whmcs_footer(name: str, data: dict) -> str:
         f"matched {totals.get('matched', 0)}, WHMCS only {totals.get('whmcs_only', 0)}, PayPal only {totals.get('paypal_only', 0)}, "
         f"difference {format_money(totals.get('difference_cents', 0))}"
     )
+
+
+# --- Stripe -------------------------------------------------------------------------------------
+
+
+def _print_stripe_import(result: dict) -> None:
+    from hpbooks.db import format_money
+
+    prefix = "dry run: " if result.get("dry_run") else ""
+    for item in result["skipped_files"]:
+        print(f"stripe: skipped {item['file']}: {item['reason']}", file=sys.stderr)
+    for name, s in result["accounts"].items():
+        print(
+            f"{prefix}stripe {name}: new={s['new']} updated={s['updated']} unchanged={s['unchanged']} "
+            f"ledger rows posted={s['ledger_inserted']} refreshed={s['ledger_updated']} "
+            f"payouts new={s['payouts_new']} updated={s['payouts_updated']}"
+            + (f" skipped: currency={s['skipped_currency']}" if s["skipped_currency"] else "")
+            + (f" skipped: unreadable={s['skipped_rows']}" if s["skipped_rows"] else "")
+        )
+        if s["ledger_account_created"]:
+            print(f"  registered the business cash account stripe-{name}")
+        anchor = s.get("anchor")
+        if anchor and anchor["recorded"]:
+            print(f"  Stripe balance {format_money(anchor['balance_cents'])} recorded as of {anchor['as_of']}")
+    match = result.get("match") or {}
+    if match:
+        parts = [f"{status}={count}" for status, count in match.items() if count]
+        print(f"{prefix}stripe payouts: " + (" ".join(parts) if parts else "none"))
+
+
+def cmd_stripe_import(args) -> int:
+    from hpbooks.stripe import import_paths
+
+    with connect() as conn:
+        result = import_paths(conn, args.paths, account=args.account, dry_run=args.dry_run)
+    _print_stripe_import(result)
+    return 0
+
+
+def cmd_stripe_status(args) -> int:
+    import json
+
+    from hpbooks import stripe_reports as sr
+
+    with connect(readonly=True) as conn:
+        data = sr.status(conn, account=args.account)
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return 0
+    if not data["ready"]:
+        print("Stripe has not been imported yet. Run: hpbooks stripe import sync/inbox/YYYY-MM-DD/stripe/")
+    print(sr.status_text(data))
+    return 0
+
+
+def cmd_stripe_reconcile(args) -> int:
+    from hpbooks import stripe_reports as sr
+
+    date_from = _date(args.date_from, "--from")
+    date_to = _date(args.date_to, "--to")
+    if (date_from is None) != (date_to is None):
+        from datetime import date
+
+        date_from = date_from or f"{date.today().year:04d}-01-01"
+        date_to = date_to or date.today().isoformat()
+    with connect(readonly=True) as conn:
+        data = sr.payouts(conn, date_from, date_to, account=args.account)
+    if args.format == "csv":
+        print(sr.table_csv("payouts", data), end="")
+        if data["bank_only"]:
+            print()
+            print(sr.table_csv("bank-only", data), end="")
+        return 0
+    print(sr.reconcile_text(data, rows=args.rows))
+    print(sr.reconcile_footer(data), file=sys.stderr)
+    return 0
+
+
+def cmd_stripe_sync(args) -> int:
+    from hpbooks.stripe import sync
+
+    date_from = _date(args.date_from, "--from")
+    date_to = _date(args.date_to, "--to")
+    with connect() as conn:
+        result = sync(conn, date_from=date_from, date_to=date_to, account=args.account, inbox=Path(args.inbox) if args.inbox else None)
+    print(f"stripe sync: saved {len(result['written'])} files")
+    _print_stripe_import(result)
+    return 0
 
 
 # --- server margins -----------------------------------------------------------------------------

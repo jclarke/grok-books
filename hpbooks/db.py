@@ -642,6 +642,76 @@ CREATE TABLE IF NOT EXISTS debt_offers (
 );
 """
 
+# Stripe balance copies, from saved GetBalanceTransactions / GetPayouts results
+# (features.stripe). Only balance-transaction fields are kept: no customer
+# names, emails, or billing details. Amounts are cents in the Stripe balance
+# currency; created / available_on / arrival_date are dates in [stripe] timezone.
+# Rows are keyed by (account, id) so a re-import updates in place.
+SCHEMA_V12 = """
+CREATE TABLE IF NOT EXISTS stripe_balance_transactions (
+  account TEXT NOT NULL,
+  id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  reporting_category TEXT,
+  amount_cents INTEGER NOT NULL,
+  fee_cents INTEGER NOT NULL DEFAULT 0,
+  net_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  exchange_rate REAL,
+  original_amount_cents INTEGER,
+  original_currency TEXT,
+  created TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  available_on TEXT,
+  status TEXT,
+  source_id TEXT,
+  payout_id TEXT,
+  description TEXT,
+  fee_details_json TEXT,
+  booking TEXT NOT NULL DEFAULT '',
+  imported_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_payouts (
+  account TEXT NOT NULL,
+  id TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  arrival_date TEXT,
+  created TEXT,
+  status TEXT,
+  balance_transaction TEXT,
+  failure_code TEXT,
+  failure_message TEXT,
+  method TEXT,
+  matched_txn_id TEXT,
+  match_status TEXT NOT NULL DEFAULT 'unmatched'
+    CHECK (match_status IN ('matched', 'in_transit', 'unmatched', 'ambiguous', 'conflict', 'failed', 'skipped')),
+  match_note TEXT,
+  imported_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_sync_log (
+  id INTEGER PRIMARY KEY,
+  ts TEXT NOT NULL,
+  account TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('import', 'sync')),
+  file TEXT,
+  counts_json TEXT,
+  status TEXT NOT NULL CHECK (status IN ('ok', 'error')),
+  error TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_stripe_btx_created ON stripe_balance_transactions(account, created);
+CREATE INDEX IF NOT EXISTS idx_stripe_btx_source ON stripe_balance_transactions(account, source_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_payouts_arrival ON stripe_payouts(account, arrival_date);
+CREATE INDEX IF NOT EXISTS idx_stripe_sync_log_account ON stripe_sync_log(account, id);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA_V1),
     (2, SCHEMA_V2),
@@ -654,6 +724,7 @@ MIGRATIONS = (
     (9, SCHEMA_V9),
     (10, SCHEMA_V10),
     (11, SCHEMA_V11),
+    (12, SCHEMA_V12),
 )
 
 # Keys the web UI is allowed to write. Values are plain text, never secrets.

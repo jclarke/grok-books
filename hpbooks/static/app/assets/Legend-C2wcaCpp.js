@@ -1,0 +1,1 @@
+import{j as a,X as n}from"./index-xuPQSfj7.js";function r({items:s}){return a.jsx("ul",{className:"legend",children:s.map(e=>a.jsxs("li",{children:[a.jsx("span",{className:n("legend__swatch",`legend__swatch--${e.shape??"square"}`,`tone-${e.tone}`),"aria-hidden":"true"}),e.label]},`${e.label}-${e.tone}`))})}export{r as C};

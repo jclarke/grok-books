@@ -36,6 +36,7 @@ aggregator pulls / CSVs / PDFs ──> importers ──> SQLCipher database (dat
 | `payments.py`, `manual_accounts.py` | Card and loan payment terms; balance-only manual accounts |
 | `capitalone.py`, `applecard.py`, `cfna.py`, `monarch.py` | File importers (see [importers.md](importers.md)) |
 | `whmcs*.py`, `margins*.py` | Optional WHMCS billing copy, reports, and server margins (see [whmcs.md](whmcs.md)) |
+| `stripe*.py` | Optional Stripe import: balance transactions booked to a Stripe cash account, payouts paired with bank deposits (see [stripe.md](stripe.md)) |
 | `web.py`, `api.py`, `webargs.py`, `access.py` | Flask app, JSON API, CSRF and request checks, host allowlist and sign-in |
 | `cli.py` | The `hpbooks` command line |
 
@@ -53,6 +54,6 @@ For each non-manual row: the first matching rule (lowest priority number, then i
 
 ## Tests
 
-- `tests/` (pytest) uses a temporary database and key per test; `tests/conftest.py` fails any test that would open the real database. Fixtures are invented (`tests/fake_accounts.py`, `tests/personal_fake.py`, `tests/whmcs_fake.py`, `tests/fixtures/config.test.toml`).
+- `tests/` (pytest) uses a temporary database and key per test; `tests/conftest.py` fails any test that would open the real database. Fixtures are invented (`tests/fake_accounts.py`, `tests/personal_fake.py`, `tests/whmcs_fake.py`, `tests/stripe_fake.py`, `tests/fixtures/config.test.toml`).
 - `tests/golden/` holds byte-for-byte expected CLI and API output for a fixed fake ledger. Regenerate with `.venv/bin/python tests/make_golden.py` only when an output change is intended.
 - `web/src/test/` (Vitest + Testing Library) mocks the network.

@@ -71,13 +71,20 @@ Use `limit` 500.
 
    An account id the database does not know is skipped and named in the output. Register it with `accounts discover` (below), then import again.
 
-5. Refresh the WHMCS billing copy. This always runs after the Finance import, so the PayPal reconciliation uses the same day's ledger (see [Daily WHMCS sync](#daily-whmcs-sync)):
+5. Stripe, only when `features.stripe = true`: save each configured Stripe account's balance transactions and payouts from the Stripe connector into `sync/inbox/YYYY-MM-DD/stripe/` (see [Daily Stripe sync](#daily-stripe-sync)). If they were saved before step 4, the import above already read them; otherwise import them now, then check the payouts:
+
+   ```bash
+   bin/hpbooks stripe import sync/inbox/YYYY-MM-DD/stripe/
+   bin/hpbooks stripe reconcile
+   ```
+
+6. Refresh the WHMCS billing copy. This always runs after the Finance import, so the PayPal reconciliation uses the same day's ledger (see [Daily WHMCS sync](#daily-whmcs-sync)):
 
    ```bash
    bin/hpbooks whmcs sync
    ```
 
-6. Refresh posted balances from Finance. Call `finance_list_accounts` with `class` `cash`, then `liability` (and `investment` if personal investment accounts are synced). Save the results as `sync/inbox/YYYY-MM-DD/accounts/finance_list_accounts.json` (in the `accounts/` subfolder, which `import` does not read; a JSON list of the tool results is fine). For every sync-enabled account of both scopes, record that row's `current_balance` (do not use `available_balance`). On a card or loan, `current_balance` is the amount owed and is entered as a positive number. The as-of date is today, because `current_balance` is the posted balance:
+7. Refresh posted balances from Finance. Call `finance_list_accounts` with `class` `cash`, then `liability` (and `investment` if personal investment accounts are synced). Save the results as `sync/inbox/YYYY-MM-DD/accounts/finance_list_accounts.json` (in the `accounts/` subfolder, which `import` does not read; a JSON list of the tool results is fine). For every sync-enabled account of both scopes, record that row's `current_balance` (do not use `available_balance`). On a card or loan, `current_balance` is the amount owed and is entered as a positive number. The as-of date is today, because `current_balance` is the posted balance:
 
    ```bash
    bin/hpbooks balances set <last4-or-label> --balance <current_balance> --as-of YYYY-MM-DD --source finance
@@ -87,7 +94,7 @@ Use `limit` 500.
 
    Instead of one `balances set` per personal account you can run `bin/hpbooks accounts discover sync/inbox/YYYY-MM-DD/accounts/finance_list_accounts.json --as-of YYYY-MM-DD`. It records a finance anchor for every non-excluded account in the file (skipping one already recorded with the same date and amount), registers any new account as personal, and never changes an existing account's scope.
 
-7. Look at what still needs a human:
+8. Look at what still needs a human:
 
    ```bash
    bin/hpbooks review --year YYYY
@@ -136,3 +143,31 @@ If a billing server's firewall lets in only some addresses, a tunnel can time ou
 Placeholder credit is not imported. A `tblcredit` row at or above `whmcs.placeholder_credit_cents` ($1,000,000 by default) (either sign) is skipped, and a client or invoice credit that large is stored as 0. The sync output shows `skipped_placeholder_credit=N` when anything was skipped, and the sync log records the counts under `placeholder_credit`. Because the sync is a full refresh, rows imported before this rule are removed on the next run.
 
 Nothing in the sync output, the sync log, or the audit log contains customer names, emails, or the MySQL password.
+
+## Daily Stripe sync
+
+Only when `features.stripe = true` in the config, with one `[[stripe.accounts]]` entry per Stripe account (see [docs/stripe.md](../docs/stripe.md)). hpbooks never calls Stripe here: Grok Bot reads Stripe with the Stripe connector and saves every result verbatim. Do it after the Finance pull, the same day:
+
+1. Call `list_available_accounts_or_orgs`. For each `[[stripe.accounts]]` entry, pick the `stripe_context` whose id equals its `stripe_account`, and that context's `livemode`. Use live mode for real books; never mix test and live data.
+2. For each configured account, call `stripe_api_read` with that `stripe_context` and `livemode`, `stripe_api_operation_id: "GetBalanceTransactions"`, and
+
+   ```json
+   {"limit": 100, "created": {"gte": <unix start of today minus 10 days, books time zone>, "lt": <unix start of tomorrow>}}
+   ```
+
+   Save the result verbatim as `sync/inbox/YYYY-MM-DD/stripe/<name>_1.json` (`<name>` is the entry's `name`). While `has_more` is true, call again with the same parameters plus `"starting_after": "<id of the last item in data>"` and save `<name>_2.json`, `<name>_3.json`, and so on.
+3. The same for `stripe_api_operation_id: "GetPayouts"` with `{"limit": 100, "created": {...same...}}` → `<name>_payouts_1.json`, `<name>_payouts_2.json`, … Optionally call `GetBalance` and save `<name>_balance.json`.
+4. Never call `stripe_api_write` or any tool that changes Stripe.
+5. Import and check the payouts:
+
+   ```bash
+   bin/hpbooks import sync/inbox/YYYY-MM-DD/        # reads stripe/ too when Stripe is on
+   # or: bin/hpbooks stripe import sync/inbox/YYYY-MM-DD/stripe/
+   bin/hpbooks stripe reconcile                     # payouts vs bank deposits, and bank-only deposits
+   ```
+
+You may add a `_query` object to each saved file (`stripe_account`, `livemode`, `created_gte`, `created_lt`); the import refuses a file whose `stripe_account` is not the entry's `stripe_account`, and any file marked `livemode: false` (in `_query` or in the results). The import is idempotent: the overlapping 10-day window updates rows in place (a `pending` charge that became `available` is updated, not duplicated).
+
+### First Stripe load (backfill)
+
+Pull month-by-month windows from the date the books start: `created.gte` = unix start of the 1st of each month and `created.lt` = the 1st of the next month (books time zone), paging each window with `starting_after`. Save the pages with a running number as `sync/inbox/backfill-stripe/stripe/<name>_<n>.json` and the payouts as `<name>_payouts_<n>.json`, then run `bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/` and `bin/hpbooks stripe reconcile --from <books start> --to <today>`.

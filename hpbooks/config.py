@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import stat
 import sys
 import tomllib
@@ -137,6 +138,45 @@ class WhmcsConfig:
 
 
 @dataclass(frozen=True)
+class StripeAccount:
+    """One Stripe balance booked as a cash account. Files are named <name>_N.json."""
+
+    name: str
+    business: str
+    stripe_account: str | None = None
+    label: str = ""
+    currency: str = "usd"
+    revenue_category: str = ""  # resolved at load: the business's revenue category, else the first one
+    payout_account: str | None = None
+    secret: str | None = None  # direct API mode: this account's key file; default [stripe] secret
+
+    @property
+    def ledger_id(self) -> str:
+        return f"stripe-{self.name}"
+
+    @property
+    def display(self) -> str:
+        return self.label or f"Stripe {self.name}"
+
+
+@dataclass(frozen=True)
+class StripeConfig:
+    fee_category: str = "Payment Processing Fees"
+    payout_match: str = "(?i)stripe"
+    payout_window_days: int = 5
+    secret: str | None = None
+    books_currency: str = "usd"
+    timezone: str = "America/New_York"
+    accounts: tuple[StripeAccount, ...] = ()
+
+    def account(self, name: str) -> StripeAccount | None:
+        for item in self.accounts:
+            if item.name == name:
+                return item
+        return None
+
+
+@dataclass(frozen=True)
 class PayerHint:
     """Where to look for a loan's payments: bank rows matching `pattern` pay the
     personal loan whose last 4 equals `match`, or whose name contains it."""
@@ -172,6 +212,7 @@ class Config:
     key_file: str | None = None
     whmcs_enabled: bool = False
     margins_enabled: bool = False
+    stripe_enabled: bool = False
     business_enabled: bool = True
     personal_enabled: bool = True
     businesses: tuple[Business, ...] = ()
@@ -187,6 +228,7 @@ class Config:
     prior_status: str = "business"
     prior_category_map: dict = field(default_factory=dict)
     whmcs: WhmcsConfig = field(default_factory=WhmcsConfig)
+    stripe: StripeConfig = field(default_factory=StripeConfig)
     payer_hints: tuple[PayerHint, ...] = ()
     importers: ImportersConfig = field(default_factory=ImportersConfig)
     update: UpdateConfig = field(default_factory=UpdateConfig)
@@ -276,6 +318,9 @@ class Config:
                 "personal": self.personal_enabled,
             },
         }
+        if self.stripe_enabled:
+            # Only sent when on, so a site without Stripe gets the same payload as before.
+            out["features"]["stripe"] = True
         if detail:
             out["businesses"] = [
                 {
@@ -309,6 +354,10 @@ class Config:
             out["whmcs_bank_sides"] = (
                 [{"gateway": s.gateway, "label": s.label} for s in self.whmcs.bank_sides] if whmcs else []
             )
+            if self.stripe_enabled:
+                out["stripe_accounts"] = [
+                    {"name": a.name, "label": a.display, "business": a.business} for a in self.stripe.accounts
+                ]
         return out
 
 
@@ -498,6 +547,98 @@ def _whmcs(raw) -> WhmcsConfig:
     )
 
 
+_STRIPE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
+
+
+def _stripe(raw) -> StripeConfig:
+    """The [stripe] table and its [[stripe.accounts]]. Types are checked here; names,
+    businesses, and categories are checked by _check_stripe when the feature is on."""
+    raw = raw or {}
+    if not isinstance(raw, dict):
+        raise ConfigError("stripe must be a table")
+    where = "stripe"
+    defaults = StripeConfig()
+    accounts_raw = raw.get("accounts", []) or []
+    if not isinstance(accounts_raw, list):
+        raise ConfigError("stripe.accounts must be a list of [[stripe.accounts]] tables")
+    accounts = []
+    for index, item in enumerate(accounts_raw):
+        aw = f"stripe.accounts[{index}]"
+        if not isinstance(item, dict):
+            raise ConfigError(f"{aw} must be a table")
+        name = _get(item, "name", str, None, aw)
+        business = _get(item, "business", str, None, aw)
+        if not name or not business:
+            raise ConfigError(f"{aw} needs name and business")
+        accounts.append(
+            StripeAccount(
+                name=name,
+                business=business,
+                stripe_account=_str_or_none(item, "stripe_account", aw),
+                label=_get(item, "label", str, "", aw),
+                currency=(_get(item, "currency", str, "usd", aw) or "usd").lower(),
+                revenue_category=_get(item, "revenue_category", str, "", aw),
+                payout_account=_str_or_none(item, "payout_account", aw),
+                secret=_str_or_none(item, "secret", aw),
+            )
+        )
+    window = _get(raw, "payout_window_days", int, defaults.payout_window_days, where)
+    if window < 0 or window > 31:
+        raise ConfigError("stripe.payout_window_days must be 0 to 31")
+    return StripeConfig(
+        fee_category=_get(raw, "fee_category", str, defaults.fee_category, where),
+        payout_match=_get(raw, "payout_match", str, defaults.payout_match, where),
+        payout_window_days=window,
+        secret=_str_or_none(raw, "secret", where),
+        books_currency=(_get(raw, "books_currency", str, defaults.books_currency, where) or "usd").lower(),
+        timezone=_get(raw, "timezone", str, defaults.timezone, where),
+        accounts=tuple(accounts),
+    )
+
+
+def _check_stripe(stripe: StripeConfig, businesses, revenue, every_category) -> StripeConfig:
+    """Validate references and fill each account's revenue category. Only run with features.stripe on."""
+    from zoneinfo import ZoneInfo
+
+    if stripe.fee_category not in every_category:
+        raise ConfigError(f"stripe.fee_category {stripe.fee_category!r} is not a category")
+    if stripe.fee_category in revenue:
+        raise ConfigError("stripe.fee_category must be an expense category")
+    try:
+        re.compile(stripe.payout_match)
+    except re.error as exc:
+        raise ConfigError(f"stripe.payout_match is not a valid regex: {exc}") from exc
+    try:
+        ZoneInfo(stripe.timezone)
+    except Exception as exc:
+        raise ConfigError(f"stripe.timezone {stripe.timezone!r} is not a known time zone") from exc
+    for where, secret in [("stripe.secret", stripe.secret)] + [
+        (f"stripe.accounts[{i}].secret", a.secret) for i, a in enumerate(stripe.accounts)
+    ]:
+        if secret is not None and ("/" in secret or "\\" in secret or secret.startswith(".")):
+            raise ConfigError(f"{where} must be a file name in the data directory")
+    slugs = {b.slug: b for b in businesses}
+    seen: set[str] = set()
+    out = []
+    for index, acct in enumerate(stripe.accounts):
+        aw = f"stripe.accounts[{index}]"
+        if not _STRIPE_NAME_RE.fullmatch(acct.name):
+            raise ConfigError(f"{aw}.name must be lowercase letters, digits, or - (up to 32)")
+        if acct.name in seen:
+            raise ConfigError(f"stripe.accounts has a repeated name {acct.name!r}")
+        seen.add(acct.name)
+        business = slugs.get(acct.business)
+        if business is None:
+            raise ConfigError(f"{aw}.business {acct.business!r} is not a business slug")
+        category = acct.revenue_category or business.revenue_category or revenue[0]
+        if category not in revenue:
+            raise ConfigError(f"{aw}.revenue_category {category!r} is not a revenue category")
+        if acct.stripe_account is not None and not acct.stripe_account.startswith("acct_"):
+            raise ConfigError(f"{aw}.stripe_account must start with acct_")
+        out.append(replace(acct, revenue_category=category))
+    return replace(stripe, accounts=tuple(out))
+
+
 def _payer_hints(raw) -> tuple[PayerHint, ...]:
     if raw is None:
         return ()
@@ -560,6 +701,7 @@ def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None)
     product = _get(app, "product_name", str, "Books", "app")
     whmcs_on = _get(features, "whmcs", bool, False, "features")
     margins_on = _get(features, "margins", bool, whmcs_on, "features") and whmcs_on
+    stripe_on = _get(features, "stripe", bool, False, "features")
     business_on = _get(features, "business", bool, True, "features")
     personal_on = _get(features, "personal", bool, True, "features")
     if not business_on and not personal_on:
@@ -591,6 +733,11 @@ def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None)
     elif whmcs_on and whmcs.revenue_category not in revenue:
         raise ConfigError("whmcs.revenue_category is not a revenue category")
 
+    stripe = _stripe(data.get("stripe"))
+    if stripe_on:
+        every_category = (*revenue, REFUNDS, *cogs, *opex)
+        stripe = _check_stripe(stripe, businesses, revenue, every_category)
+
     rules_file = _str_or_none(seed, "rules_file", "seed")
     prior_map = seed.get("prior_category_map", {}) or {}
     if not isinstance(prior_map, dict):
@@ -612,6 +759,7 @@ def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None)
         key_file=_path(_str_or_none(paths, "key_file", "paths")),
         whmcs_enabled=whmcs_on,
         margins_enabled=margins_on,
+        stripe_enabled=stripe_on,
         business_enabled=business_on,
         personal_enabled=personal_on,
         businesses=businesses,
@@ -627,6 +775,7 @@ def build(data: dict, *, source: str = "defaults", base_dir: Path | None = None)
         prior_status=_get(seed, "prior_status", str, "business", "seed"),
         prior_category_map={str(k): str(v) for k, v in prior_map.items()},
         whmcs=whmcs,
+        stripe=stripe,
         payer_hints=_payer_hints((data.get("payments", {}) or {}).get("payer_hints")),
         importers=_importers(data.get("importers")),
         update=_update(data.get("update")),
@@ -700,9 +849,27 @@ def margins_enabled() -> bool:
     return get_config().margins_enabled
 
 
+def stripe_enabled() -> bool:
+    return get_config().stripe_enabled
+
+
+def stripe_settings() -> StripeConfig:
+    """The checked [stripe] settings with every account's revenue category filled in.
+
+    Empty (no accounts) when the feature is off: accounts are only active with it on.
+    Checked again here so a config switched on with override() is validated too.
+    """
+    cfg = get_config()
+    if not cfg.stripe_enabled:
+        return replace(cfg.stripe, accounts=())
+    every_category = (*cfg.revenue_categories, REFUNDS, *cfg.cogs_categories, *cfg.opex_categories)
+    return _check_stripe(cfg.stripe, cfg.businesses, cfg.revenue_categories, every_category)
+
+
 BUSINESS_DISABLED = "business mode is disabled (set features.business = true in config/local.toml)"
 PERSONAL_DISABLED = "personal mode is disabled (set features.personal = true in config/local.toml)"
 WHMCS_DISABLED = "WHMCS integration is disabled (set features.whmcs = true in config/local.toml)"
+STRIPE_DISABLED = "Stripe integration is disabled (set features.stripe = true in config/local.toml)"
 
 
 def load_rules_file(path: Path) -> list[tuple]:

@@ -34,6 +34,7 @@ const WhmcsReconciliationPage = lazy(() => import("./pages/WhmcsReconciliationPa
 const WhmcsCustomersPage = lazy(() => import("./pages/WhmcsCustomersPage"));
 const WhmcsCustomerPage = lazy(() => import("./pages/WhmcsCustomerPage"));
 const WhmcsMarginsPage = lazy(() => import("./pages/WhmcsMarginsPage"));
+const StripePage = lazy(() => import("./pages/StripePage"));
 const PersonalDashboardPage = lazy(() => import("./pages/personal/PersonalDashboardPage"));
 const NetWorthPage = lazy(() => import("./pages/personal/NetWorthPage"));
 const PersonalAccountsPage = lazy(() => import("./pages/personal/PersonalAccountsPage"));
@@ -74,7 +75,7 @@ export function makeQueryClient(): QueryClient {
 
 export const ROUTER_FUTURE = { v7_startTransition: true, v7_relativeSplatPath: true } as const;
 
-/** Routes behind a feature flag (WHMCS, server margins) are "not found" when it is off. */
+/** Routes behind a feature flag (WHMCS, server margins, Stripe) are "not found" when it is off. */
 function Gated({ children }: { children: ReactNode }) {
   const { features } = useConfig();
   const { pathname } = useLocation();
@@ -153,6 +154,7 @@ export function AppRoutes() {
             <Route path="/whmcs/margins" element={<Gated><WhmcsMarginsPage /></Gated>} />
             <Route path="/whmcs/customers" element={<Gated><WhmcsCustomersPage /></Gated>} />
             <Route path="/whmcs/customers/:brand/:id" element={<Gated><WhmcsCustomerPage /></Gated>} />
+            <Route path="/stripe" element={<Gated><StripePage /></Gated>} />
             <Route path="/personal" element={<PersonalDashboardPage />} />
             <Route path="/personal/net-worth" element={<NetWorthPage />} />
             <Route path="/personal/accounts" element={<PersonalAccountsPage />} />

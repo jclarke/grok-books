@@ -24,7 +24,7 @@ Business tags, categories, and the accounts `init` seeds are read once per proce
 |---|---|
 | `[app]` | `product_name` (browser title, sign-in screen, export headers), `company_name` (P&L titles, sidebar), `wordmark` (logo text) |
 | `[paths]` | `db` and `key_file`. Relative paths are relative to the repository |
-| `[features]` | `business` and `personal` (both default `true`; at least one must be on), `whmcs` (default `false`), `margins` (defaults to the `whmcs` value and needs it) |
+| `[features]` | `business` and `personal` (both default `true`; at least one must be on), `whmcs` (default `false`), `margins` (defaults to the `whmcs` value and needs it), `stripe` (default `false`) |
 | `[[businesses]]` | The business tags the P&L is split by: `slug`, `label`, `kind` (`brand`, `consulting`, `overhead`, or any text), `tone`, `color`, `color_dark`, `revenue_category`. The first `overhead` business (else the last one) receives generic costs and is the default tag |
 | `[categories]` | `revenue`, `cogs`, `opex` lists. `Refunds`, `Owner Draw`, `Transfer`, and `Uncategorized` are built in. Opex names that match a Schedule C line get that line in the Schedule C report |
 | `[[accounts.business]]` | Business accounts `init` registers: `id` (the aggregator's account id), `name`, `type` (`cash` or `liability`), `last4`, `institution`, `short_name`, `label`, `roles` (`operating`, `paypal`, `capitalone_default`). Empty by default; accounts can be registered later with `bin/hpbooks accounts discover` |
@@ -33,6 +33,7 @@ Business tags, categories, and the accounts `init` seeds are read once per proce
 | `[importers]` | Defaults for the scripts in `scripts/` (see [importers.md](importers.md)) |
 | `[[payments.payer_hints]]` | How `accounts infer-payments` finds a loan's payments in a bank account |
 | `[whmcs]` | Only read when `features.whmcs = true`; see [whmcs.md](whmcs.md) |
+| `[stripe]`, `[[stripe.accounts]]` | `fee_category`, `payout_match`, `payout_window_days`, `books_currency`, `timezone`, optional `secret`; one `[[stripe.accounts]]` per Stripe account (`name`, `business`, `stripe_account`, `label`, `currency`, `revenue_category`, `payout_account`). Only active when `features.stripe = true`; see [stripe.md](stripe.md) |
 | `[update]` | `repo` (`owner/name`, default `jclarke/grok-books`), `remote` (default `public`), `branch` (default `main`) for `hpbooks update check\|apply`; see the README's Updates section |
 
 Keep personal rule patterns, account ids, and real names in `config/local.toml` and in a `rules_file` such as `config/seed_rules.local.json`. Both match the `.gitignore` patterns (`config/local.toml`, `config/*.local.*`) and are never committed.
@@ -58,5 +59,7 @@ Precedence for the database and key: environment variable, then `[paths]`, then 
 `features.whmcs = false` (the default): the `whmcs` and `margins` commands print a message and exit, `/api/whmcs/*`, `/api/margins/*`, and `/export/whmcs/*` answer 404, and the web UI hides those pages. Personal mode shows setup steps until a personal account exists.
 
 `features.personal = false`: the `personal` command prints a message and exits, `/api/personal/*` answers 404, and the web UI hides the Business | Personal switch and sends `/personal/...` pages to their business counterpart. `features.business = false`: the business-only commands (`pnl`, `review`, `rules`, `txns`, `classify`, `balances`, `vendors`, `transfers`, `whmcs`, ...) print a message and exit, and the web UI opens in personal mode with no switch. `init`, `import`, `accounts`, `audit`, `web`, and `update` work in either case. Both off is a config error.
+
+`features.stripe = false` (the default): the `stripe` commands print a message and exit with status 2, `/api/stripe/*` and `/export/stripe/*` answer 404, `bin/hpbooks import` ignores `stripe/` folders, `/api/config` does not mention Stripe, and the web UI has no Stripe page or dashboard card. See [stripe.md](stripe.md).
 
 The web UI reads the product name, businesses, feature flags, and brand names from `GET /api/config`, so the built bundle contains nothing install-specific and does not need rebuilding when the config changes.

@@ -18,6 +18,8 @@ import type {
   Rule,
   RulePreview,
   SearchResults,
+  StripePayouts,
+  StripeSummary,
   TableReport,
   TxnDetail,
   TxnPage,
@@ -55,6 +57,7 @@ export const keys = {
   search: (q: string, mode = "business") => ["search", q, mode] as const,
   whmcs: (name: string, p: Params = {}) => ["whmcs", name, p] as const,
   margins: ["margins"] as const,
+  stripe: (name: string, p: Params = {}) => ["stripe", name, p] as const,
   payments: (mode: "business" | "personal") => ["payments", mode] as const,
 };
 
@@ -220,6 +223,31 @@ export function useMargins() {
     placeholderData: keepPreviousData,
     enabled: getSiteConfig().features.margins,
   });
+}
+
+// --- Stripe (read-only; refreshed by `hpbooks stripe import`) -------------------
+
+/** Stripe endpoints answer 404 when the integration is off; never ask them. */
+function stripeOn(): boolean {
+  return getSiteConfig().features.stripe === true;
+}
+
+function stripeQuery<T>(name: string, path: string, p: Params = {}, enabled = true) {
+  return useQuery({
+    queryKey: keys.stripe(name, p),
+    queryFn: ({ signal }) => apiGet<T>(path, p, { signal }),
+    placeholderData: keepPreviousData,
+    enabled: enabled && stripeOn(),
+  });
+}
+
+/** Totals, per-account figures, months, and payout match counts. Pass `enabled: false` to skip the request. */
+export function useStripeSummary(p: Params, enabled = true) {
+  return stripeQuery<StripeSummary>("summary", "/stripe/summary", p, enabled);
+}
+
+export function useStripePayouts(p: Params, enabled = true) {
+  return stripeQuery<StripePayouts>("payouts", "/stripe/payouts", p, enabled);
 }
 
 // --- Card and loan payments (both modes; the mode is always named, never inferred from the path) ---

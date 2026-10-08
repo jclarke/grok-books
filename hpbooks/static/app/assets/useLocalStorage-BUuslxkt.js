@@ -1,0 +1,1 @@
+import{v as o}from"./index-xuPQSfj7.js";function c(t,r){try{const a=window.localStorage.getItem(t);return a===null?r:JSON.parse(a)}catch{return r}}function u(t,r){try{window.localStorage.setItem(t,JSON.stringify(r))}catch{}}function l(t,r){const[a,n]=o.useState(()=>c(t,r)),s=o.useCallback(e=>{n(e),u(t,e)},[t]);return[a,s]}export{c as r,l as u,u as w};

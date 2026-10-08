@@ -26,6 +26,7 @@ business = true    # business mode UI/CLI (ledger, P&L, rules, reports)
 personal = true    # personal mode UI/CLI (`hpbooks personal`, /personal pages)
                    # at least one of business / personal must be true
 whmcs = false      # WHMCS billing import, reports, and PayPal reconciliation
+stripe = false     # Stripe balance import (revenue, refunds, fees) and payout reconciliation
 # margins = false  # server margins; defaults to the whmcs value and needs whmcs = true
 
 # --- businesses ---------------------------------------------------------------------
@@ -184,6 +185,29 @@ paypal_account_role = "paypal"
 # account_role = "operating"
 # label = "Card processor deposits"
 # match = "stripe"
+
+# --- Stripe (only active when features.stripe = true) --------------------------------------
+# Each [[stripe.accounts]] entry is booked as a business cash account (stripe-<name>): charges
+# post gross revenue and fees, refunds and disputes reduce revenue, payouts are transfers paired
+# with the bank deposit. Grok Bot saves the Stripe connector results to
+# sync/inbox/YYYY-MM-DD/stripe/<name>_N.json and <name>_payouts_N.json. See docs/stripe.md.
+# [stripe]
+# fee_category = "Payment Processing Fees"   # where Stripe fees go (must be an expense category)
+# payout_match = "(?i)stripe"                # regex a bank deposit's text must match to pair with a payout
+# payout_window_days = 5                     # 0 to 31: bank deposit may land 1 day before to N days after the payout's arrival date
+# books_currency = "usd"                     # rows in another currency are stored but not posted
+# timezone = "America/New_York"              # Stripe timestamps become ledger dates in this zone
+# secret = "stripe.secret"                   # optional direct-API mode: restricted read-only key in data/
+#
+# [[stripe.accounts]]
+# name = "main"                  # lowercase letters, digits, -: file prefix in sync/inbox/.../stripe/<name>_N.json and CLI --account
+# business = "general"           # business slug that gets the revenue and fees
+# stripe_account = "acct_..."    # optional: the Stripe account id, used to check files belong here
+# label = "Stripe"               # optional display name (default "Stripe <name>")
+# currency = "usd"               # settlement currency of this Stripe balance (default "usd")
+# revenue_category = "Revenue - Sales"   # default: the business's revenue_category, else the first revenue category
+# payout_account = "0001"        # optional: last 4 or id of the bank account payouts land in (default: any business cash account)
+# secret = "stripe_main.secret"  # optional: this account's own key file for `stripe sync`
 
 # --- updates --------------------------------------------------------------------------
 [update]
