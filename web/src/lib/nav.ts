@@ -54,6 +54,7 @@ export const PERSONAL_NAV: NavItem[] = [
   { to: "/personal/recurring", label: "Recurring", icon: "repeat", paletteLabel: "Recurring and subscriptions" },
   { to: "/personal/bills", label: "Bills", icon: "calendar", paletteLabel: "Upcoming bills" },
   { to: "/personal/goals", label: "Goals", icon: "bookmark" },
+  { to: "/personal/debt-payoff", label: "Debt payoff", icon: "trendingDown", paletteLabel: "Debt payoff and consolidation what-if" },
   { to: "/personal/review-month", label: "Monthly summary", icon: "fileText" },
   { to: "/personal/review", label: "Review", icon: "review", badge: "review", primary: true, paletteLabel: "Personal review queue" },
   { to: "/personal/categories", label: "Categories & rules", icon: "tag" },

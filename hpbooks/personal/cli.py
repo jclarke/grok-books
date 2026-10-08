@@ -145,6 +145,38 @@ def add_parser(sub) -> None:
     r.set_defaults(func=cmd_rules_disable)
     p = cmd("reconcile", cmd_reconcile, "tie income, draws, spending, and transfers to balance changes", json_flag=True)
     p.add_argument("--month", required=True)
+    p = cmd("offers", cmd_offers_list, "saved loan offers for the Debt payoff page", json_flag=True)
+    osub = p.add_subparsers(dest="offers_cmd")
+    o = osub.add_parser("list", help="list saved offers")
+    o.add_argument("--json", action="store_true")
+    o.set_defaults(func=cmd_offers_list)
+    o = osub.add_parser("add", help="save an offer")
+    _offer_flags(o, required=True)
+    o.set_defaults(func=cmd_offers_add)
+    o = osub.add_parser("update", help="change an offer (only the flags given)")
+    o.add_argument("offer_id", type=int)
+    _offer_flags(o, required=False)
+    o.set_defaults(func=cmd_offers_update)
+    o = osub.add_parser("delete", help="delete an offer")
+    o.add_argument("offer_id", type=int)
+    o.set_defaults(func=cmd_offers_delete)
+
+
+def _offer_flags(parser, *, required: bool) -> None:
+    parser.add_argument("--lender", required=required)
+    parser.add_argument("--amount", required=required, help='dollars: 187500, "187,500", or "$187,500.00"')
+    parser.add_argument("--apr", required=required, help="percent, e.g. 9.76")
+    parser.add_argument("--fee", help="origination fee percent, 0 to 10 (default 0)")
+    fee = parser.add_mutually_exclusive_group()
+    fee.add_argument("--fee-from-proceeds", dest="fee_from_proceeds", action="store_const", const=True, default=None,
+                     help="the fee comes out of the loan proceeds (the default)")
+    fee.add_argument("--fee-added", dest="fee_from_proceeds", action="store_const", const=False,
+                     help="full proceeds; the fee is paid separately")
+    parser.add_argument("--term", required=required, help="months, 1 to 360")
+    parser.add_argument("--payment", help="monthly payment as quoted, dollars")
+    parser.add_argument("--notes")
+    parser.add_argument("--expires", help="YYYY-MM-DD")
+    parser.add_argument("--source", choices=("manual", "grok", "import"), default=None if not required else "manual")
 
 
 def cmd_seed_rules(_args) -> int:
@@ -565,3 +597,77 @@ def cmd_reconcile(args) -> int:
         return "\n".join(lines)
 
     return _emit(args, data, text)
+
+
+# --- loan offers ------------------------------------------------------------------
+
+
+def _offer_body(args) -> dict:
+    body: dict = {}
+    for flag, key in (("lender", "lender"), ("amount", "amount"), ("apr", "apr"), ("fee", "fee_pct"), ("term", "term_months"),
+                      ("payment", "monthly_payment"), ("notes", "notes"), ("expires", "expires_on"), ("source", "source")):
+        value = getattr(args, flag, None)
+        if value is not None:
+            body[key] = value
+    if args.fee_from_proceeds is not None:
+        body["fee_from_proceeds"] = args.fee_from_proceeds
+    return body
+
+
+def _offers_text(rows: list[dict]) -> str:
+    if not rows:
+        return "no saved offers (add one: hpbooks personal offers add --lender ... --amount ... --apr ... --term ...)"
+    table = [
+        [
+            str(row["id"]), row["lender"], _money(row["amount_cents"]), f"{row['apr']:g}%", f"{row['fee_pct']:g}%",
+            "proceeds" if row["fee_from_proceeds"] else "added", str(row["term_months"]), _money(row["monthly_payment_cents"]),
+            (row["expires_on"] or "") + (" (expired)" if row["expired"] else ""), row["source"], row["notes"],
+        ]
+        for row in rows
+    ]
+    return _table(["ID", "Lender", "Amount", "APR", "Fee", "Fee from", "Term", "Quoted pmt", "Expires", "Source", "Notes"], table, right_from=2)
+
+
+def _offer_line(offer: dict) -> str:
+    fee = f"{offer['fee_pct']:g}% fee {'from proceeds' if offer['fee_from_proceeds'] else 'added'}"
+    payment = f", quoted {_money(offer['monthly_payment_cents'])}/mo" if offer["monthly_payment_cents"] else ""
+    return f"#{offer['id']} {offer['lender']}: {_money(offer['amount_cents'])} at {offer['apr']:g}% for {offer['term_months']} months, {fee}{payment}"
+
+
+def cmd_offers_list(args) -> int:
+    from hpbooks.personal.offers import list_offers
+
+    with connect(readonly=True) as conn:
+        rows = list_offers(conn)
+    return _emit(args, rows, _offers_text)
+
+
+def cmd_offers_add(args) -> int:
+    from hpbooks.personal.offers import create_offer
+
+    with connect() as conn:
+        offer = create_offer(conn, _offer_body(args), actor="cli")
+    print(f"saved offer {_offer_line(offer)}")
+    return 0
+
+
+def cmd_offers_update(args) -> int:
+    from hpbooks.personal.offers import update_offer
+
+    body = _offer_body(args)
+    if not body:
+        raise HpbooksError("nothing to change: give at least one flag")
+    with connect() as conn:
+        offer = update_offer(conn, args.offer_id, body, actor="cli")
+    print(f"updated offer {_offer_line(offer)}")
+    return 0
+
+
+def cmd_offers_delete(args) -> int:
+    from hpbooks.personal.offers import delete_offer, get_offer
+
+    with connect() as conn:
+        offer = get_offer(conn, args.offer_id)
+        delete_offer(conn, args.offer_id, actor="cli")
+    print(f"deleted offer {_offer_line(offer)}")
+    return 0

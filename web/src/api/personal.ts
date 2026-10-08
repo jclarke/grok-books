@@ -4,7 +4,7 @@
  * outside React Query's memory; localStorage holds only the mode flag.
  */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPatch, apiPost } from "./client";
+import { apiDelete, apiGet, apiPatch, apiPost } from "./client";
 import type { PersonalCategory } from "./types";
 
 type Params = Record<string, string | number | boolean | null | undefined>;
@@ -226,6 +226,75 @@ export interface Bills {
   income_expected_cents: number;
 }
 
+export interface DebtAccount {
+  id: string;
+  label: string;
+  last4: string;
+  institution: string;
+  kind: "card" | "loan";
+  balance_cents: number;
+  apr: number | null;
+  apr_text: string;
+  minimum_payment_cents: number | null;
+  due_date: string | null;
+  maturity_date?: string | null;
+}
+
+export interface DebtPayoff {
+  as_of: string;
+  cards: DebtAccount[];
+  loans: DebtAccount[];
+  mortgages_excluded: number;
+  totals: {
+    card_balance_cents: number;
+    loan_balance_cents: number;
+    card_minimums_cents: number;
+    cards_missing_minimum: number;
+    cards_missing_apr: number;
+  };
+}
+
+export type OfferSource = "manual" | "grok" | "import";
+
+export interface DebtOffer {
+  id: number;
+  lender: string;
+  amount_cents: number;
+  amount: number;
+  apr: number;
+  fee_pct: number;
+  fee_from_proceeds: boolean;
+  term_months: number;
+  monthly_payment_cents: number | null;
+  monthly_payment: number | null;
+  source: OfferSource;
+  notes: string;
+  expires_on: string | null;
+  expired: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** What the add/edit form sends. Money in cents. */
+export interface DebtOfferInput {
+  lender: string;
+  amount_cents: number;
+  apr: number;
+  fee_pct: number;
+  fee_from_proceeds: boolean;
+  term_months: number;
+  monthly_payment_cents: number | null;
+  notes: string;
+  expires_on: string | null;
+  source?: OfferSource;
+}
+
+export interface DebtOfferWrite {
+  ok: true;
+  offer: DebtOffer | { id: number; deleted: true };
+  rows: DebtOffer[];
+}
+
 export interface Goal {
   id: number;
   name: string;
@@ -401,6 +470,8 @@ export const pkeys = {
   recurring: () => ["personal", "recurring"] as const,
   bills: (days: number) => ["personal", "bills", days] as const,
   goals: () => ["personal", "goals"] as const,
+  debtPayoff: () => ["personal", "debt-payoff"] as const,
+  debtOffers: () => ["personal", "debt-offers"] as const,
   summary: (month: string) => ["personal", "summary", month] as const,
   review: () => ["personal", "review"] as const,
   categories: () => ["personal", "categories"] as const,
@@ -443,6 +514,26 @@ export const useBudgetSuggestions = (month: string, enabled: boolean) =>
   });
 export const useRecurring = () => useQuery({ queryKey: pkeys.recurring(), queryFn: get<Recurring>("/recurring") });
 export const useBills = (days: number) => useQuery({ queryKey: pkeys.bills(days), queryFn: get<Bills>("/bills", { days }) });
+export const useDebtPayoff = () => useQuery({ queryKey: pkeys.debtPayoff(), queryFn: get<DebtPayoff>("/debt-payoff") });
+export const useDebtOffers = () => useQuery({ queryKey: pkeys.debtOffers(), queryFn: get<{ rows: DebtOffer[] }>("/debt-offers") });
+
+/** Create (no id), update (id), or delete saved loan offers; the list is refetched after each. */
+export function useDebtOfferWrite() {
+  const client = useQueryClient();
+  const onSuccess = (data: DebtOfferWrite) => {
+    client.setQueryData(pkeys.debtOffers(), { ok: true, rows: data.rows });
+    void client.invalidateQueries({ queryKey: pkeys.debtOffers() });
+  };
+  return {
+    save: useMutation({
+      mutationFn: ({ id, body }: { id?: number; body: DebtOfferInput }) =>
+        id === undefined ? apiPost<DebtOfferWrite>("/personal/debt-offers", body) : apiPatch<DebtOfferWrite>(`/personal/debt-offers/${id}`, body),
+      onSuccess,
+    }),
+    remove: useMutation({ mutationFn: (id: number) => apiDelete<DebtOfferWrite>(`/personal/debt-offers/${id}`), onSuccess }),
+  };
+}
+
 export const useGoals = () => useQuery({ queryKey: pkeys.goals(), queryFn: get<{ rows: Goal[] }>("/goals") });
 export const useMonthlySummary = (month: string) =>
   useQuery({ queryKey: pkeys.summary(month), queryFn: get<MonthlySummary>("/summary", { month }), placeholderData: keepPreviousData });

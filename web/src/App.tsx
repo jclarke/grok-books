@@ -45,6 +45,7 @@ const BudgetsPage = lazy(() => import("./pages/personal/BudgetsPage"));
 const RecurringPage = lazy(() => import("./pages/personal/RecurringPage"));
 const BillsPage = lazy(() => import("./pages/personal/BillsPage"));
 const GoalsPage = lazy(() => import("./pages/personal/GoalsPage"));
+const DebtPayoffPage = lazy(() => import("./pages/personal/DebtPayoffPage"));
 const MonthlySummaryPage = lazy(() => import("./pages/personal/MonthlySummaryPage"));
 const PersonalReviewPage = lazy(() => import("./pages/personal/PersonalReviewPage"));
 const CategoriesPage = lazy(() => import("./pages/personal/CategoriesPage"));
@@ -163,6 +164,7 @@ export function AppRoutes() {
             <Route path="/personal/recurring" element={<RecurringPage />} />
             <Route path="/personal/bills" element={<BillsPage />} />
             <Route path="/personal/goals" element={<GoalsPage />} />
+            <Route path="/personal/debt-payoff" element={<DebtPayoffPage />} />
             <Route path="/personal/review-month" element={<MonthlySummaryPage />} />
             <Route path="/personal/review" element={<PersonalReviewPage />} />
             <Route path="/personal/categories" element={<CategoriesPage />} />

@@ -99,7 +99,12 @@ export async function apiPatch<T>(path: string, body: unknown, params?: Params):
   return send<T>("PATCH", path, body, params);
 }
 
-async function send<T>(method: "POST" | "PATCH", path: string, body: unknown, params?: Params): Promise<T> {
+/** Pass `params.mode` for a route that serves both modes; the path alone reads as business. */
+export async function apiDelete<T>(path: string, params?: Params): Promise<T> {
+  return send<T>("DELETE", path, undefined, params);
+}
+
+async function send<T>(method: "POST" | "PATCH" | "DELETE", path: string, body: unknown, params?: Params): Promise<T> {
   if (!csrfToken) {
     // The session query normally sets this first; fetch it if a mutation races ahead.
     const session = await apiGet<{ csrf_token: string }>("/session");
@@ -113,7 +118,7 @@ async function send<T>(method: "POST" | "PATCH", path: string, body: unknown, pa
       "Content-Type": "application/json",
       "X-CSRF-Token": csrfToken,
     },
-    body: JSON.stringify(body),
+    body: body === undefined ? undefined : JSON.stringify(body),
   });
   return parse<T>(response);
 }

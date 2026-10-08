@@ -4,6 +4,7 @@ import type {
   Bills,
   Budgets,
   CashFlow,
+  DebtPayoff,
   Goal,
   MonthlySummary,
   NetWorth,
@@ -291,4 +292,19 @@ export const ppayments: Payments = {
     unverified_count: 0,
     missing_count: 1,
   },
+};
+
+export const debtPayoff: DebtPayoff = {
+  as_of: "2026-09-30",
+  cards: [
+    { id: "fake-dp-card-high", label: "Fake Store Card", last4: "4444", institution: "Fake Bank", kind: "card", balance_cents: 300000, apr: null, apr_text: "", minimum_payment_cents: null, due_date: null },
+    { id: "fake-dp-card-a", label: "Fake Rewards Visa", last4: "3333", institution: "Fake Card Co", kind: "card", balance_cents: 800000, apr: 27.99, apr_text: "27.99% purchase / 29.99% cash", minimum_payment_cents: 24000, due_date: "2026-10-15" },
+    { id: "fake-dp-card-b", label: "Fake Cashback Card", last4: "5555", institution: "Fake Bank", kind: "card", balance_cents: 500000, apr: 18.5, apr_text: "18.5%", minimum_payment_cents: 15000, due_date: "2026-10-20" },
+  ],
+  loans: [
+    { id: "fake-dp-loan", label: "Fake Personal Loan", last4: "6666", institution: "Fake Lender", kind: "loan", balance_cents: 150000, apr: 11.5, apr_text: "11.5% interest rate", minimum_payment_cents: 50000, due_date: "2026-10-05", maturity_date: "2026-12-05" },
+    { id: "fake-dp-auto", label: "Fake Auto Loan", last4: "", institution: "Fake Auto", kind: "loan", balance_cents: 1200000, apr: null, apr_text: "", minimum_payment_cents: 40000, due_date: "2026-10-11", maturity_date: null },
+  ],
+  mortgages_excluded: 1,
+  totals: { card_balance_cents: 1600000, loan_balance_cents: 1350000, card_minimums_cents: 39000, cards_missing_minimum: 1, cards_missing_apr: 1 },
 };

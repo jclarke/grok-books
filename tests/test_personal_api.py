@@ -78,6 +78,8 @@ READ_ROUTES = [
     "/api/personal/budgets/suggestions?month=2026-09",
     "/api/personal/recurring",
     "/api/personal/bills?days=45",
+    "/api/personal/debt-payoff",
+    "/api/personal/debt-offers",
     "/api/personal/goals",
     "/api/personal/summary?month=2026-09",
     "/api/personal/reconcile?month=2026-09",

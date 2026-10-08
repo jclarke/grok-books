@@ -622,6 +622,26 @@ CREATE TABLE IF NOT EXISTS account_payment_terms (
 );
 """
 
+# Personal loan offers saved to compare on the Debt payoff page. Standalone: no
+# foreign keys, nothing in the ledger refers to it, rows stay until deleted.
+SCHEMA_V11 = """
+CREATE TABLE IF NOT EXISTS debt_offers (
+  id INTEGER PRIMARY KEY,
+  lender TEXT NOT NULL CHECK (length(trim(lender)) > 0),
+  amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+  apr REAL NOT NULL CHECK (apr >= 0 AND apr <= 100),
+  fee_pct REAL NOT NULL DEFAULT 0 CHECK (fee_pct >= 0 AND fee_pct <= 10),
+  fee_from_proceeds INTEGER NOT NULL DEFAULT 1 CHECK (fee_from_proceeds IN (0, 1)),
+  term_months INTEGER NOT NULL CHECK (term_months BETWEEN 1 AND 360),
+  monthly_payment_cents INTEGER CHECK (monthly_payment_cents IS NULL OR monthly_payment_cents > 0),
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'grok', 'import')),
+  notes TEXT,
+  expires_on TEXT CHECK (expires_on IS NULL OR expires_on GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA_V1),
     (2, SCHEMA_V2),
@@ -633,6 +653,7 @@ MIGRATIONS = (
     (8, SCHEMA_V8),
     (9, SCHEMA_V9),
     (10, SCHEMA_V10),
+    (11, SCHEMA_V11),
 )
 
 # Keys the web UI is allowed to write. Values are plain text, never secrets.

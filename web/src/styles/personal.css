@@ -470,3 +470,425 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Debt payoff what-if */
+.debt-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-5);
+}
+
+.debt-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.debt-group__title {
+  margin-bottom: var(--s-1);
+  padding: 0;
+  color: var(--text);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+
+.debt-note,
+.debt-check__hint,
+.debt-scenario__sub,
+.debt-saved__hint,
+.debt-sub {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.debt-note {
+  margin: 0;
+}
+
+.debt-actions,
+.debt-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.debt-pair > .field {
+  flex: 1 1 140px;
+}
+
+.debt-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.debt-check input {
+  margin-top: 3px;
+  accent-color: var(--brand);
+}
+
+.debt-check__hint {
+  display: block;
+  font-weight: normal;
+}
+
+.debt-range__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.debt-range__value {
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.debt-range__row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.debt-range__row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--brand);
+}
+
+.debt-range__num {
+  width: 88px;
+  flex: none;
+}
+
+.debt-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+
+.debt-scenario__title {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  color: var(--text);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.debt-scenario__sub {
+  margin: var(--s-1) 0 var(--s-3);
+}
+
+.debt-facts {
+  display: grid;
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.debt-fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.debt-fact dt {
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.debt-fact dd {
+  margin: 0;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-semibold);
+  text-align: right;
+}
+
+.debt-fact--strong dd {
+  font-size: var(--fs-lg);
+}
+
+.debt-saved {
+  border-color: var(--pos);
+  background: var(--pos-soft);
+}
+
+.debt-saved--neg {
+  border-color: var(--neg);
+  background: var(--neg-soft);
+}
+
+.debt-saved__value {
+  margin: var(--s-3) 0 var(--s-1);
+  font-size: 2rem;
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.debt-saved__value.is-pos {
+  color: var(--pos);
+}
+
+.debt-saved__value.is-neg {
+  color: var(--neg);
+}
+
+.debt-saved__hint {
+  margin: 0;
+  color: var(--text);
+}
+
+.debt-warning {
+  margin: 0;
+}
+
+.debt-table-head {
+  padding: var(--s-5) var(--s-5) var(--s-3);
+}
+
+.debt-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.debt-table {
+  min-width: 760px;
+}
+
+.debt-table__check {
+  width: 1%;
+  text-align: center !important;
+}
+
+.debt-table__check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+}
+
+.debt-name {
+  color: var(--text);
+  font-weight: var(--fw-medium);
+}
+
+.debt-sub--block {
+  display: block;
+}
+
+.debt-apr {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.debt-apr--end {
+  justify-content: flex-end;
+}
+
+.debt-apr .field {
+  width: 92px;
+  flex: none;
+}
+
+.debt-stuck {
+  margin: var(--s-3) 0 0;
+  color: var(--neg);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+}
+
+.debt-sub--neg {
+  color: var(--neg);
+  font-weight: var(--fw-medium);
+}
+
+.debt-disclaimer {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+}
+
+.chart-line--dashed {
+  stroke-dasharray: 6 4;
+}
+
+@media (max-width: 1100px) {
+  .debt-inputs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .debt-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .debt-saved {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .debt-inputs,
+  .debt-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .debt-actions > .btn,
+  .debt-page .segmented {
+    width: 100%;
+  }
+  .debt-page .segmented__item {
+    flex: 1;
+  }
+  .debt-table-head {
+    padding: var(--s-4) var(--s-4) var(--s-2);
+  }
+}
+
+/* Debt payoff: offers and the scenario comparison */
+.legend__swatch--dash {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(90deg, var(--tone) 0 5px, transparent 5px 8px);
+}
+
+.debt-scenario-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.debt-compare th[scope="row"] {
+  min-width: 220px;
+  font-weight: normal;
+  text-align: left;
+}
+
+.debt-compare__baseline {
+  background: var(--surface-2);
+}
+
+.debt-pos {
+  color: var(--pos);
+  font-weight: var(--fw-semibold);
+}
+
+.debt-compare td.num span.debt-pos,
+.debt-compare td.num span.text-neg {
+  font-weight: var(--fw-semibold);
+}
+
+.debt-quote-note {
+  color: var(--warn);
+  font-style: italic;
+}
+
+.debt-offers__actions {
+  white-space: nowrap;
+  text-align: right !important;
+}
+
+.debt-offers__custom {
+  background: var(--surface-2);
+}
+
+.debt-offers__error {
+  margin: 0 var(--s-5) var(--s-3);
+  color: var(--neg);
+  font-size: var(--fs-sm);
+}
+
+.debt-table tr.is-expired .debt-name {
+  color: var(--text-2);
+}
+
+.debt-offer-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3) var(--s-4);
+}
+
+.debt-offer-form__wide {
+  grid-column: 1 / -1;
+}
+
+.debt-offer-form__notes {
+  height: auto;
+  padding: var(--s-2) var(--s-3);
+  resize: vertical;
+}
+
+@media (max-width: 640px) {
+  .debt-offer-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Tables that turn into one card per row on a phone. */
+  .debt-stack {
+    min-width: 0;
+  }
+  .debt-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .debt-stack,
+  .debt-stack tbody,
+  .debt-stack tr,
+  .debt-stack th[scope="row"],
+  .debt-stack td {
+    display: block;
+    width: 100%;
+  }
+  .debt-stack tr {
+    padding: var(--s-2) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .debt-stack th[scope="row"],
+  .debt-stack td {
+    border-bottom: 0;
+    padding: 4px var(--s-4);
+  }
+  .debt-stack td[data-label] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-2);
+    text-align: right !important;
+  }
+  .debt-stack td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    text-align: left;
+  }
+  .debt-stack td[data-label] > .debt-sub--block {
+    flex-basis: 100%;
+  }
+  .debt-stack td.debt-table__check {
+    width: 100%;
+    text-align: right !important;
+  }
+  .debt-stack .debt-offers__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--s-2);
+  }
+}

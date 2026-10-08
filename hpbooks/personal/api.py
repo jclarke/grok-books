@@ -303,6 +303,22 @@ def bills():
         return jsonify({"ok": True, **pa.bills(conn, days)})
 
 
+@personal_api.get("/api/personal/debt-payoff")
+def debt_payoff():
+    from hpbooks.personal import debt
+
+    with connect(readonly=True) as conn:
+        return jsonify({"ok": True, **debt.build(conn)})
+
+
+@personal_api.get("/api/personal/debt-offers")
+def debt_offers():
+    from hpbooks.personal import offers
+
+    with connect(readonly=True) as conn:
+        return jsonify({"ok": True, "rows": offers.list_offers(conn)})
+
+
 @personal_api.get("/api/personal/goals")
 def goals():
     with connect(readonly=True) as conn:
@@ -544,6 +560,32 @@ def budgets_average():
     if ids is not None and (not isinstance(ids, list) or any(isinstance(item, bool) or not isinstance(item, int) for item in ids)):
         raise PersonalError("category_ids must be a list of ids")
     return _write(lambda conn: actions.apply_average(conn, month, ids, actor="web"))
+
+
+def _offer_write(fn, status: int = 200):
+    from hpbooks.personal import offers
+
+    with connect() as conn:
+        result = fn(conn, offers)
+        rows = offers.list_offers(conn)
+    return jsonify({"ok": True, "offer": result, "rows": rows}), status
+
+
+@personal_api.post("/api/personal/debt-offers")
+def debt_offers_create():
+    body = _body()
+    return _offer_write(lambda conn, offers: offers.create_offer(conn, body, actor="web"), 201)
+
+
+@personal_api.route("/api/personal/debt-offers/<int:offer_id>", methods=["PUT", "PATCH"])
+def debt_offers_update(offer_id):
+    body = _body()
+    return _offer_write(lambda conn, offers: offers.update_offer(conn, offer_id, body, actor="web"))
+
+
+@personal_api.delete("/api/personal/debt-offers/<int:offer_id>")
+def debt_offers_delete(offer_id):
+    return _offer_write(lambda conn, offers: offers.delete_offer(conn, offer_id, actor="web"))
 
 
 @personal_api.post("/api/personal/goals")
