@@ -168,6 +168,26 @@ Only when `features.stripe = true` in the config, with one `[[stripe.accounts]]`
 
 You may add a `_query` object to each saved file (`stripe_account`, `livemode`, `created_gte`, `created_lt`); the import refuses a file whose `stripe_account` is not the entry's `stripe_account`, and any file marked `livemode: false` (in `_query` or in the results). The import is idempotent: the overlapping 10-day window updates rows in place (a `pending` charge that became `available` is updated, not duplicated).
 
+### Stripe insights (billing objects)
+
+For the business analytics (`bin/hpbooks stripe metrics`; see [docs/stripe.md](../docs/stripe.md#business-analytics)), pull the billing objects too, with the same `stripe_context`, `livemode`, and read-only `stripe_api_read`, `"limit": 100`, paging with `"starting_after": "<id of the last item in data>"` while `has_more` is true, each page saved verbatim with a running number:
+
+| `stripe_api_operation_id` | Daily parameters | Save as |
+| --- | --- | --- |
+| `GetSubscriptions` | `{"limit": 100, "status": "all", "expand": ["data.discounts", "data.items.data.discounts"]}` (every page; statuses change) | `stripe/<name>_subscriptions_<n>.json` |
+| `GetInvoices` | `{"limit": 100, "created": {...same 10-day window...}}` | `stripe/<name>_invoices_<n>.json` |
+| `GetInvoicePayments` | `{"limit": 100}` (or `"invoice": "in_…"` for each new invoice) | `stripe/<name>_invoice_payments_<n>.json` |
+| `GetCharges` | `{"limit": 100, "created": {...same...}}` | `stripe/<name>_charges_<n>.json` |
+| `GetCustomers` | `{"limit": 100}` (weekly is enough) | `stripe/<name>_customers_<n>.json` |
+| `GetCoupons` | `{"limit": 100}` (every page; small) | `stripe/<name>_coupons_<n>.json` |
+| `GetPrices`, `GetProducts` | `{"limit": 100}` (weekly is enough) | `stripe/<name>_prices_<n>.json`, `stripe/<name>_products_<n>.json` |
+
+Ask for the discounts expanded, `"expand": ["data.discounts", "data.items.data.discounts"]`, and pull `GetCoupons` in full every time. An expanded discount still names its coupon by id only (`"source": {"type": "coupon", "coupon": "<coupon id>"}`), and the import looks the terms up in the coupons file. Without the expand, or for a coupon missing from the coupons file, MRR and the forecast take the discounted share of the subscription's most recent paid invoice, (line amount − discount) / line amount, and say so in the approximations.
+
+Backfill once, into `sync/inbox/backfill-stripe/stripe/`: subscriptions with `status: all` in full; invoices and charges month by month by `created` from the books' start date (as in the payout backfill below); invoice payments, customers, prices, products, and coupons in full. Then `bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/` and `bin/hpbooks stripe metrics`.
+
+The import keeps only the fields the metrics need and then **rewrites the customers, invoices, charges, subscriptions, and coupons files in place** to those fields (no names, emails, phones, addresses, billing details, receipt or invoice URLs, descriptions, or metadata stay on disk). Use `--keep-raw` to skip that. A file from an older pull never overwrites newer data, so re-running an old folder is safe. Never call `stripe_api_write`.
+
 ### First Stripe load (backfill payouts)
 
 Pull everything from the date the books start, one calendar month per window, so payouts reconcile against the bank history you already imported:

@@ -195,6 +195,27 @@ class StripeCapital:
 
 
 @dataclass(frozen=True)
+class StripeCogs:
+    """A books category whose spend is charged to these Stripe products (by revenue share among them)."""
+
+    category: str
+    products: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class StripeMetricsConfig:
+    """[stripe.metrics]: options for the business analytics (stripe_metrics)."""
+
+    cogs: tuple[StripeCogs, ...] = ()
+    cogs_categories: tuple[str, ...] = ()  # allocated over every product by revenue share
+    cac_cents: int | None = None  # acquisition cost per new customer
+    cac_category: str | None = None  # or: books spend in this category / new customers
+    spike_factor: float = 2.0
+    spike_min_cents: int = 5000
+    forecast_days: int = 90
+
+
+@dataclass(frozen=True)
 class StripeConfig:
     fee_category: str = "Payment Processing Fees"
     payout_match: str = "(?i)stripe"
@@ -205,6 +226,7 @@ class StripeConfig:
     capital_fee_category: str = ""  # resolved when on: "Interest" if that category exists, else fee_category
     accounts: tuple[StripeAccount, ...] = ()
     capital: tuple[StripeCapital, ...] = ()
+    metrics: StripeMetricsConfig = field(default_factory=StripeMetricsConfig)
 
     def account(self, name: str) -> StripeAccount | None:
         for item in self.accounts:
@@ -662,6 +684,53 @@ def _stripe(raw) -> StripeConfig:
         capital_fee_category=_get(raw, "capital_fee_category", str, defaults.capital_fee_category, where),
         accounts=tuple(accounts),
         capital=tuple(capital),
+        metrics=_stripe_metrics(raw.get("metrics")),
+    )
+
+
+def _stripe_metrics(raw) -> StripeMetricsConfig:
+    """[stripe.metrics]. Types are checked here; categories by _check_stripe when the feature is on."""
+    raw = raw or {}
+    where = "stripe.metrics"
+    if not isinstance(raw, dict):
+        raise ConfigError("stripe.metrics must be a table")
+    defaults = StripeMetricsConfig()
+    cogs_raw = raw.get("cogs", []) or []
+    if not isinstance(cogs_raw, list):
+        raise ConfigError("stripe.metrics.cogs must be a list of {category, products} tables")
+    cogs = []
+    for index, item in enumerate(cogs_raw):
+        cw = f"{where}.cogs[{index}]"
+        if not isinstance(item, dict):
+            raise ConfigError(f"{cw} must be a table")
+        category = _get(item, "category", str, None, cw)
+        if not category:
+            raise ConfigError(f"{cw} needs category")
+        products = _str_list(item.get("products", []), f"{cw}.products")
+        for product in products:
+            if not product.startswith("prod_"):
+                raise ConfigError(f"{cw}.products must be Stripe product ids (prod_...)")
+        cogs.append(StripeCogs(category=category, products=tuple(products)))
+    factor = _get(raw, "spike_factor", float, defaults.spike_factor, where)
+    if factor <= 1:
+        raise ConfigError(f"{where}.spike_factor must be more than 1")
+    days = _get(raw, "forecast_days", int, defaults.forecast_days, where)
+    if not 7 <= days <= 365:
+        raise ConfigError(f"{where}.forecast_days must be 7 to 365")
+    cac = _dollars(raw, "cac", where) if "cac" in raw else None
+    if cac is not None and cac < 0:
+        raise ConfigError(f"{where}.cac must not be negative")
+    spike_min = _dollars(raw, "spike_min", where) if "spike_min" in raw else defaults.spike_min_cents
+    if spike_min < 0:
+        raise ConfigError(f"{where}.spike_min must not be negative")
+    return StripeMetricsConfig(
+        cogs=tuple(cogs),
+        cogs_categories=tuple(_str_list(raw.get("cogs_categories", []), f"{where}.cogs_categories")),
+        cac_cents=cac,
+        cac_category=_str_or_none(raw, "cac_category", where),
+        spike_factor=float(factor),
+        spike_min_cents=spike_min,
+        forecast_days=days,
     )
 
 
@@ -726,6 +795,15 @@ def _check_stripe(stripe: StripeConfig, businesses, revenue, every_category) -> 
         raise ConfigError(f"stripe.capital_fee_category {fee_category!r} is not a category")
     if fee_category in revenue or fee_category == REFUNDS:
         raise ConfigError("stripe.capital_fee_category must be an expense category")
+    metrics = stripe.metrics
+    named = [(f"stripe.metrics.cogs[{i}].category", c.category) for i, c in enumerate(metrics.cogs)]
+    named += [("stripe.metrics.cogs_categories", name) for name in metrics.cogs_categories]
+    named += [("stripe.metrics.cac_category", metrics.cac_category)] if metrics.cac_category else []
+    for where, name in named:
+        if name not in every_category:
+            raise ConfigError(f"{where} {name!r} is not a category")
+        if name in revenue or name == REFUNDS:
+            raise ConfigError(f"{where} must be an expense category")
     return replace(stripe, accounts=tuple(out), capital=_check_capital(stripe.capital, seen), capital_fee_category=fee_category)
 
 

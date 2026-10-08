@@ -68,7 +68,11 @@ HOLD_CATEGORIES = {"payout_minimum_balance_hold", "payout_minimum_balance_releas
 BOOKINGS = ("revenue", "refund", "dispute", "fee", "payout", "payout_return", "hold", "capital", "unknown", "skipped_currency")
 MATCH_STATUSES = ("matched", "in_transit", "unmatched", "ambiguous", "conflict", "failed", "skipped", "no_bank_history")
 
-_FILE_RE = re.compile(r"^(?P<name>[a-z0-9][a-z0-9-]*?)(?:_(?P<kind>payouts|charges|balance))?(?:_(?P<page>\d+))?$")
+_FILE_RE = re.compile(
+    r"^(?P<name>[a-z0-9][a-z0-9-]*?)"
+    r"(?:_(?P<kind>payouts|charges|balance|customers|products|prices|subscriptions|invoice_payments|invoices|coupons))?"
+    r"(?:_(?P<page>\d+))?$"
+)
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 _DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -149,7 +153,8 @@ def _unwrap(obj, where: str) -> list[dict]:
 
 
 def parse_name(path: Path) -> tuple[str | None, str]:
-    """(account name, kind) from <name>_N.json, <name>_payouts_N.json, <name>_charges_N.json, <name>_balance.json."""
+    """(account name, kind) from <name>_N.json, <name>_payouts_N.json, <name>_charges_N.json, <name>_balance.json,
+    and the billing objects <name>_<customers|products|prices|subscriptions|invoices|invoice_payments|coupons>_N.json."""
     match = _FILE_RE.fullmatch(path.stem)
     if not match:
         return None, "balance_transactions"
@@ -160,13 +165,15 @@ def parse_name(path: Path) -> tuple[str | None, str]:
 def _kind_from_content(page: dict) -> str | None:
     if page.get("object") == "balance":
         return "balance"
+    from hpbooks.stripe_objects import OBJECT_KIND, URL_KIND
+
     url = str(page.get("url") or "")
-    for marker, kind in (("/v1/balance_transactions", "balance_transactions"), ("/v1/payouts", "payouts"), ("/v1/charges", "charges")):
+    for marker, kind in (("/v1/balance_transactions", "balance_transactions"), ("/v1/payouts", "payouts"), ("/v1/charges", "charges"), *URL_KIND):
         if url.startswith(marker):
             return kind
     data = page.get("data")
     if isinstance(data, list) and data and isinstance(data[0], dict):
-        return {"balance_transaction": "balance_transactions", "payout": "payouts", "charge": "charges"}.get(data[0].get("object"))
+        return {"balance_transaction": "balance_transactions", "payout": "payouts", **OBJECT_KIND}.get(data[0].get("object"))
     return None
 
 
@@ -697,6 +704,7 @@ def _account_stats() -> dict:
         "anchor": None,
         "ledger_account_created": False,
         "capital": None,
+        "objects": {},
     }
 
 
@@ -716,8 +724,15 @@ def _check_query(acct: StripeAccount, loaded: dict) -> str | None:
     return None
 
 
-def import_files(conn, paths: list[Path], *, account: str | None = None, dry_run: bool = False, today: date | None = None) -> dict:
-    """Import saved Stripe results. Returns {"accounts": {name: stats}, "skipped_files": [...], "match": {...}}."""
+def import_files(
+    conn, paths: list[Path], *, account: str | None = None, dry_run: bool = False, today: date | None = None, keep_raw: bool = False
+) -> dict:
+    """Import saved Stripe results. Returns {"accounts": {name: stats}, "skipped_files": [...], "match": {...}, "scrubbed": [...]}.
+
+    Billing objects (customers, subscriptions, invoices, coupons, ...) go to stripe_objects. After the
+    import, the PII-bearing files among them are rewritten to their whitelisted fields
+    unless `keep_raw` (or a dry run)."""
+    from hpbooks import stripe_objects
     cfg = require_enabled()
     today = today or date.today()
     loaded = []
@@ -791,8 +806,13 @@ def import_files(conn, paths: list[Path], *, account: str | None = None, dry_run
                     note_payout(acct.name, payout["id"], upsert_payout(conn, acct, payout))
         elif item["kind"] == "balance":
             stats["anchor"] = record_balance(conn, acct, cfg, item, today)
-        elif item["kind"] == "charges":
-            _apply_charges(conn, acct, charges[acct.name])
+        if item["kind"] in stripe_objects.KINDS:
+            if item["kind"] == "charges":
+                _apply_charges(conn, acct, charges[acct.name])
+            counts = stripe_objects.import_file(conn, acct.name, item, item["folder_date"] or today.isoformat())
+            mine = stats["objects"].setdefault(item["kind"], {key: 0 for key in counts})
+            for key, value in counts.items():
+                mine[key] += value
     for name, outcomes in payout_outcomes.items():
         for outcome in outcomes.values():
             results[name]["payouts_" + outcome] += 1
@@ -804,7 +824,12 @@ def import_files(conn, paths: list[Path], *, account: str | None = None, dry_run
                 "INSERT INTO stripe_sync_log (ts, account, kind, file, counts_json, status) VALUES (?, ?, 'import', ?, ?, 'ok')",
                 (now_iso(), name, None, json.dumps({k: v for k, v in stats.items() if k != "anchor"}, sort_keys=True)),
             )
-    out = {"accounts": results, "skipped_files": skipped_files, "match": match, "dry_run": dry_run}
+    scrubbed: list[str] = []
+    if not dry_run and not keep_raw:
+        for _acct, item in loaded:
+            if item["kind"] in stripe_objects.SCRUB_KINDS and stripe_objects.scrub_file(item["path"], item["kind"], item["pages"]):
+                scrubbed.append(str(item["path"]))
+    out = {"accounts": results, "skipped_files": skipped_files, "match": match, "dry_run": dry_run, "scrubbed": scrubbed}
     if dry_run:
         conn.rollback()
     return out

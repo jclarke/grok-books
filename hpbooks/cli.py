@@ -65,6 +65,8 @@ def build_parser() -> argparse.ArgumentParser:
     imp.add_argument("paths", nargs="+")
     imp.add_argument("--from", dest="date_from", help="YYYY-MM-DD inclusive")
     imp.add_argument("--to", dest="date_to", help="YYYY-MM-DD inclusive")
+    if get_config().stripe_enabled:
+        imp.add_argument("--keep-raw", action="store_true", help="do not scrub Stripe customer, invoice, charge, subscription, and coupon files to their stored fields")
     imp.set_defaults(func=cmd_import)
 
     rec = sub.add_parser("reclassify", help="re-run rules on non-manual rows")
@@ -289,6 +291,7 @@ def build_parser() -> argparse.ArgumentParser:
     stripe_import.add_argument("paths", nargs="+")
     stripe_import.add_argument("--account", help=f"{stripe_names}; default: the file name prefix (<name>_N.json)")
     stripe_import.add_argument("--dry-run", action="store_true", help="show what would change and write nothing")
+    stripe_import.add_argument("--keep-raw", action="store_true", help="do not scrub customer, invoice, charge, subscription, and coupon files to their stored fields")
     stripe_import.set_defaults(func=cmd_stripe_import)
     stripe_status = stripe_sub.add_parser("status", help="per account: last import, totals this month and year, payouts, review")
     stripe_status.add_argument("--account", help=stripe_names)
@@ -305,6 +308,16 @@ def build_parser() -> argparse.ArgumentParser:
     stripe_cap.add_argument("--account", help=stripe_names)
     stripe_cap.add_argument("--json", action="store_true")
     stripe_cap.set_defaults(func=cmd_stripe_capital)
+    stripe_metrics = stripe_sub.add_parser("metrics", help="business analytics: MRR, churn, cohorts, margins, fees, Capital cost, LTV, forecast")
+    stripe_metrics.add_argument("--month", help="YYYY-MM focus month (default: the last complete month)")
+    stripe_metrics.add_argument("--account", help=stripe_names)
+    stripe_metrics.add_argument("--json", action="store_true")
+    stripe_metrics.add_argument(
+        "--section",
+        choices=("mrr", "churn", "cohorts", "margin", "fees", "capital", "ltv", "concentration", "recovery", "refunds", "forecast"),
+        help="print one section in full (default: KPI summary and the MRR bridge)",
+    )
+    stripe_metrics.set_defaults(func=cmd_stripe_metrics)
     stripe_sync = stripe_sub.add_parser("sync", help="optional: pull from the Stripe API with a restricted read-only key, then import")
     stripe_sync.add_argument("--from", dest="date_from", help="YYYY-MM-DD (default 10 days ago)")
     stripe_sync.add_argument("--to", dest="date_to", help="YYYY-MM-DD (default today)")
@@ -396,7 +409,7 @@ def cmd_import(args) -> int:
         if stripe_paths:
             from hpbooks.stripe import import_files
 
-            stripe_result = import_files(conn, stripe_paths)
+            stripe_result = import_files(conn, stripe_paths, keep_raw=getattr(args, "keep_raw", False))
     for stats in summaries:
         print(
             f"{stats['file']}: inserted={stats['inserted']} updated={stats['updated']} "
@@ -1162,9 +1175,17 @@ def _print_stripe_import(result: dict) -> None:
                 print(f"stripe {name}: Capital row left alone: {item['reason']}", file=sys.stderr)
             for text in cap["warnings"]:
                 print(f"stripe {name}: warning: {text}", file=sys.stderr)
+        for kind, counts in (s.get("objects") or {}).items():
+            print(
+                f"  {kind}: new={counts['new']} updated={counts['updated']} unchanged={counts['unchanged']}"
+                + (f" older-than-stored={counts['stale']}" if counts["stale"] else "")
+                + (f" unreadable={counts['skipped']}" if counts["skipped"] else "")
+            )
         anchor = s.get("anchor")
         if anchor and anchor["recorded"]:
             print(f"  Stripe balance {format_money(anchor['balance_cents'])} recorded as of {anchor['as_of']}")
+    if result.get("scrubbed"):
+        print(f"{prefix}stripe: scrubbed {len(result['scrubbed'])} file(s) to the stored fields (customer, invoice, charge, subscription, coupon data)")
     match = result.get("match") or {}
     if match:
         parts = [f"{status}={count}" for status, count in match.items() if count]
@@ -1175,8 +1196,31 @@ def cmd_stripe_import(args) -> int:
     from hpbooks.stripe import import_paths
 
     with connect() as conn:
-        result = import_paths(conn, args.paths, account=args.account, dry_run=args.dry_run)
+        result = import_paths(conn, args.paths, account=args.account, dry_run=args.dry_run, keep_raw=args.keep_raw)
     _print_stripe_import(result)
+    return 0
+
+
+def cmd_stripe_metrics(args) -> int:
+    import json
+
+    from hpbooks import stripe_metrics as sm
+
+    sections = (args.section,) if args.section else sm.SECTIONS
+    with connect(readonly=True) as conn:
+        data = sm.build(conn, month=args.month, account=args.account, sections=sections)
+    if args.json:
+        if args.section:
+            data = {key: data[key] for key in ("start", "end", "month", "currency", "as_of", "accounts", "approximations", args.section)}
+        print(json.dumps(data, indent=2))
+        return 0
+    if args.section:
+        print(f"Stripe {args.section} ({data['start']} to {data['end']}, focus {data['month']})")
+        print(sm.section_text(args.section, data))
+        if data["approximations"]:
+            print("\nApproximations:\n" + "\n".join(f"- {text}" for text in data["approximations"]))
+        return 0
+    print(sm.summary_text(data))
     return 0
 
 

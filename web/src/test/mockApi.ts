@@ -56,6 +56,11 @@ const defaults: Record<string, Handler> = {
   "GET /api/margins": () => mx.margins,
   "GET /api/stripe/summary": () => sx.stripeSummary,
   "GET /api/stripe/payouts": () => sx.stripePayouts,
+  "GET /api/stripe/metrics": () => sx.stripeMetrics,
+  "GET /api/stripe/metrics/mrr": () => {
+    const { mrr, summary, ok, ready, start, end, month, business, account, currency, as_of, accounts, approximations } = sx.stripeMetrics;
+    return { ok, ready, start, end, month, business, account, currency, as_of, accounts, approximations, summary: { ...summary, forecast_low_cents: null, forecast_low_date: null }, mrr };
+  },
   "POST /api/classify": (call) => {
     const body = call.body as { txn_id: string; tag: string; category: string; note: string; save_rule?: boolean };
     return {

@@ -1053,3 +1053,347 @@ export interface StripePayouts {
     bank_only_cents: number;
   };
 }
+
+// --- Stripe business analytics (GET /api/stripe/metrics; read-only) -----------------
+// Money is integer cents in the books currency; *_pct are percentages (12.5 = 12.5%) or null when undefined.
+
+export type StripeMetricsSection =
+  | "mrr" | "churn" | "cohorts" | "margin" | "fees" | "capital" | "ltv" | "concentration" | "recovery" | "refunds" | "forecast";
+
+export interface StripeMetricsSummary {
+  mrr_cents: number;
+  arr_cents: number;
+  trialing_mrr_cents: number;
+  active_customers: number;
+  /** Subscriptions a forever coupon takes to zero: not paying customers */
+  free_subscriptions: number;
+  arpa_cents: number | null;
+  net_new_mrr_cents: number;
+  customer_churn_pct: number | null;
+  gross_revenue_churn_pct: number | null;
+  net_revenue_churn_pct: number | null;
+  nrr_t12m_pct: number | null;
+  grr_t12m_pct: number | null;
+  gross_margin_pct: number | null;
+  effective_fee_pct: number | null;
+  ltv_cents: number | null;
+  top10_share_pct: number | null;
+  hhi: number | null;
+  recovery_rate_pct: number | null;
+  at_risk_mrr_cents: number;
+  forecast_low_cents: number | null;
+  forecast_low_date: string | null;
+}
+
+/** Customer-level MRR movement; opening + new + reactivated + expansion - contraction - churned = closing exactly. */
+export interface StripeMrrMovement {
+  opening_cents: number;
+  new_cents: number;
+  reactivated_cents: number;
+  expansion_cents: number;
+  contraction_cents: number;
+  churned_cents: number;
+  closing_cents: number;
+  new_customers: number;
+  reactivated_customers: number;
+  expansion_customers: number;
+  contraction_customers: number;
+  churned_customers: number;
+}
+
+export interface StripeMrrMonth extends StripeMrrMovement {
+  month: string;
+  mrr_cents: number;
+  arr_cents: number;
+  trialing_mrr_cents: number;
+  customers: number;
+  subscriptions: number;
+  free_subscriptions: number;
+  arpa_cents: number | null;
+  /** Invoiced metered (usage) revenue, not part of MRR */
+  usage_revenue_cents: number;
+}
+
+export interface StripeMrrSection {
+  month: string;
+  mrr_cents: number;
+  arr_cents: number;
+  trialing_mrr_cents: number;
+  customers: number;
+  subscriptions: number;
+  free_subscriptions: number;
+  arpa_cents: number | null;
+  usage_revenue_cents: number;
+  bridge: StripeMrrMovement & { month: string; reconciles: boolean };
+  by_product: { product: string; name: string; mrr_cents: number; share_pct: number | null }[];
+  months: StripeMrrMonth[];
+}
+
+export interface StripeChurnRow {
+  month: string;
+  start_customers: number;
+  churned_customers: number;
+  voluntary_customers: number;
+  involuntary_customers: number;
+  customer_churn_pct: number | null;
+  opening_mrr_cents: number;
+  churned_mrr_cents: number;
+  voluntary_mrr_cents: number;
+  involuntary_mrr_cents: number;
+  contraction_cents: number;
+  expansion_cents: number;
+  gross_revenue_churn_pct: number | null;
+  net_revenue_churn_pct: number | null;
+  nrr_pct: number | null;
+  grr_pct: number | null;
+}
+
+export interface StripeChurnSection {
+  month: StripeChurnRow;
+  months: StripeChurnRow[];
+  nrr_t12m_pct: number | null;
+  grr_t12m_pct: number | null;
+}
+
+export interface StripeCohort {
+  cohort: string;
+  customers: number;
+  retention: { k: number; month: string; customers: number; customers_pct: number | null; revenue_cents: number; revenue_pct: number | null }[];
+}
+
+export interface StripeMarginFigures {
+  gross_cents: number;
+  fees_cents: number;
+  refunds_cents: number;
+  disputes_cents: number;
+  capital_fees_cents: number;
+  cogs_cents: number;
+  margin_cents: number;
+  margin_pct: number | null;
+}
+
+export interface StripeMarginSection {
+  /** product is a prod_ id or "Unattributed" */
+  products: (StripeMarginFigures & { product: string; name: string; revenue_share_pct: number | null })[];
+  totals: StripeMarginFigures;
+  months: (StripeMarginFigures & { month: string })[];
+  cogs: { month: string; category: string; cents: number; products: string[] }[];
+  links: { invoice_payment: number; legacy: number; heuristic: number; unlinked: number };
+}
+
+export interface StripeFeeFigures {
+  count: number;
+  gross_cents: number;
+  fees_cents: number;
+  rate_pct: number | null;
+}
+
+export type StripeFeeMethod = "card" | "link" | "ach" | "other" | "total";
+
+export interface StripeFeesSection {
+  months: ({ month: string } & Record<StripeFeeMethod, StripeFeeFigures>)[];
+  range: Record<StripeFeeMethod, StripeFeeFigures>;
+  ach_savings: {
+    estimate: true;
+    card_link_count: number;
+    card_link_volume_cents: number;
+    card_link_fees_cents: number;
+    card_link_rate_pct: number | null;
+    /** Card and Link apart: Link is card-funded and priced like a card */
+    card_rate_pct: number | null;
+    link_rate_pct: number | null;
+    /** Link's share of the card + Link volume */
+    link_share_pct: number | null;
+    /** false: no ACH (us_bank_account) charges in the range, so the ACH rate is Stripe's list price */
+    ach_history: boolean;
+    ach_rate_pct: number;
+    ach_rate_source: "observed" | "stripe_pricing";
+    ach_cap_cents: number;
+    estimated_ach_fees_cents: number;
+    estimated_savings_cents: number;
+  };
+}
+
+export interface StripeCapitalCost {
+  account: string;
+  financing: string | null;
+  label: string;
+  terms: boolean;
+  principal_cents: number | null;
+  fee_cents: number | null;
+  paid_cents: number;
+  principal_outstanding_cents: number | null;
+  remaining_cents: number | null;
+  proceeds_date: string | null;
+  last_paydown: string | null;
+  /** Daily IRR x 365 */
+  apr_pct: number | null;
+  /** (1 + daily IRR) ^ 365 - 1 */
+  effective_annual_pct: number | null;
+  /** true: the unpaid rest was projected at the average daily repayment so far */
+  projected: boolean;
+  days?: number;
+  note: string;
+}
+
+export interface StripeCapitalSection {
+  financings: StripeCapitalCost[];
+  withheld: {
+    /** The loan's start (first proceeds or repayment); months before it are left out. null: no Capital activity */
+    start_date: string | null;
+    months: { month: string; gross_cents: number; withheld_cents: number; share_pct: number | null }[];
+    /** Months from the start with sales; the monthly average is over these */
+    active_months: number;
+    days: number;
+    avg_daily_share_pct: number | null;
+    avg_monthly_share_pct: number | null;
+  };
+}
+
+export interface StripeLtvSection {
+  arpa_cents: number | null;
+  gross_margin_pct: number | null;
+  monthly_revenue_churn_pct: number | null;
+  /** true: churn was about zero, lifetime capped at 60 months */
+  churn_capped: boolean;
+  lifetime_months: number | null;
+  ltv_cents: number | null;
+  cac_cents: number | null;
+  cac_source: string | null;
+  payback_months: number | null;
+  notes: string[];
+}
+
+export interface StripeConcentrationSection {
+  window_start: string;
+  window_end: string;
+  total_cents: number;
+  customers: number;
+  no_customer_cents: number;
+  top1_pct: number | null;
+  top5_pct: number | null;
+  top10_pct: number | null;
+  hhi: number | null;
+  /** Customer ids only (cus_...), never names */
+  top: { rank: number; customer: string; revenue_cents: number; share_pct: number | null }[];
+}
+
+export interface StripeRecoveryMonth {
+  month: string;
+  failed_charges: number;
+  failed_cents: number;
+  dunning_invoices: number;
+  dunning_cents: number;
+  recovered_invoices: number;
+  recovered_cents: number;
+  lost_invoices: number;
+  lost_cents: number;
+  /** Open with a retry scheduled (still in dunning): neither recovered nor lost, not in the rate */
+  in_progress_invoices: number;
+  in_progress_cents: number;
+  /** Open with no retry left and not lost */
+  open_invoices: number;
+  open_cents: number;
+  recovery_rate_pct: number | null;
+}
+
+export interface StripeRecoverySection {
+  months: StripeRecoveryMonth[];
+  totals: Omit<StripeRecoveryMonth, "month">;
+  at_risk_mrr_cents: number;
+  at_risk_subscriptions: number;
+  collection_rate_pct: number | null;
+}
+
+export interface StripeRefundMonth {
+  month: string;
+  gross_cents: number;
+  refunds_cents: number;
+  disputes_cents: number;
+  refund_rate_pct: number | null;
+  dispute_rate_pct: number | null;
+}
+
+export interface StripeRefundsSection {
+  months: StripeRefundMonth[];
+  products: { product: string; name: string; months: (StripeRefundMonth & { median_rate_pct: number | null; spike: boolean })[] }[];
+  spikes: { month: string; product: string; name: string; refunds_cents: number; refund_rate_pct: number | null; median_rate_pct: number | null }[];
+  spike_factor: number;
+  spike_min_cents: number;
+}
+
+export type StripeForecastKind = "renewals" | "capital_withholding" | "payout_in_transit" | "stripe_balance" | "bill" | "card_due";
+
+export interface StripeForecastSection {
+  estimate: true;
+  start: string;
+  end: string;
+  days: number;
+  opening_cash_cents: number;
+  closing_cents: number;
+  lowest: { date: string; balance_cents: number };
+  collection_rate_pct: number;
+  fee_rate_pct: number;
+  withheld_share_pct: number;
+  capital_owed_cents: number;
+  payout_lag_days: number;
+  totals: Record<"renewals_cents" | "capital_withholding_cents" | "in_transit_cents" | "stripe_balance_cents" | "bills_cents" | "cards_cents", number>;
+  daily: { date: string; inflow_cents: number; outflow_cents: number; balance_cents: number; lowest: boolean }[];
+  /** Per week; the *_cents by kind are signed (inflows positive) and add up to inflow - outflow */
+  weekly: {
+    week_start: string;
+    week_end: string;
+    renewals_cents: number;
+    /** Payouts in transit and the Stripe balance not yet paid out */
+    in_transit_cents: number;
+    capital_withholding_cents: number;
+    bills_cents: number;
+    cards_cents: number;
+    inflow_cents: number;
+    outflow_cents: number;
+    closing_cents: number;
+    low_cents: number;
+  }[];
+  /** Signed: inflows positive, outflows negative */
+  events: { date: string; kind: StripeForecastKind; label: string; cents: number }[];
+  notes: string[];
+}
+
+export interface StripeMetricsMeta {
+  ok: true;
+  ready: boolean;
+  start: string;
+  end: string;
+  /** Focus month (YYYY-MM): KPIs and the MRR bridge */
+  month: string;
+  business: string;
+  account: string | null;
+  currency: string;
+  as_of: string;
+  accounts: string[];
+  /** What was estimated and why, one sentence each */
+  approximations: string[];
+}
+
+export interface StripeMetrics extends StripeMetricsMeta {
+  summary: StripeMetricsSummary;
+  mrr: StripeMrrSection;
+  churn: StripeChurnSection;
+  cohorts: { cohorts: StripeCohort[]; max_k: number };
+  margin: StripeMarginSection;
+  fees: StripeFeesSection;
+  capital: StripeCapitalSection;
+  ltv: StripeLtvSection;
+  concentration: StripeConcentrationSection;
+  recovery: StripeRecoverySection;
+  refunds: StripeRefundsSection;
+  forecast: StripeForecastSection;
+}
+
+/** GET /api/stripe/metrics/<section>: the meta fields, the summary KPIs (forecast_* null unless the section is forecast), and that one section. */
+export type StripeMetricsSectionResponse<S extends StripeMetricsSection> = StripeMetricsMeta & Pick<StripeMetrics, "summary" | S>;
+
+/** Tables for GET /api/stripe/metrics/export/<table>.<csv|xlsx|pdf> */
+export type StripeMetricsExportTable =
+  | "summary" | "mrr" | "movement" | "mrr-products" | "churn" | "cohorts" | "cohort-revenue" | "margin" | "margin-months"
+  | "fees" | "fees-methods" | "capital" | "capital-withheld" | "ltv" | "concentration" | "recovery" | "refunds" | "forecast" | "forecast-weekly" | "forecast-events";

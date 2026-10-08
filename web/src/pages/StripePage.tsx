@@ -1,3 +1,4 @@
+import { Link, useLocation } from "react-router-dom";
 import { exportUrl } from "../api/client";
 import { useStripePayouts, useStripeSummary } from "../api/queries";
 import type { StripeAccountSummary, StripeBankDeposit, StripeCapital, StripeCapitalFinancing, StripeMonth, StripePayoutRow, StripePayoutStatus, StripeSummary } from "../api/types";
@@ -10,7 +11,7 @@ import { Icon } from "../components/Icon";
 import { KpiCard } from "../components/KpiCard";
 import { Money } from "../components/MoneyCell";
 import { PageHeader } from "../components/PageHeader";
-import { useGlobalFilters } from "../hooks/useGlobalFilters";
+import { useGlobalFilters, withGlobal } from "../hooks/useGlobalFilters";
 import { formatDate, formatMonth, formatRange, pluralize } from "../lib/format";
 import { businessLabel, type Tone } from "../lib/labels";
 
@@ -129,6 +130,7 @@ function BankDeposit({ bank }: { bank: StripeBankDeposit }) {
 
 export default function StripePage() {
   const filters = useGlobalFilters();
+  const location = useLocation();
   const params: Params = { start: filters.start, end: filters.end, business: filters.business };
   const summaryQuery = useStripeSummary(params);
   const summary = summaryQuery.data;
@@ -230,6 +232,16 @@ export default function StripePage() {
               </>
             )}
           </section>
+
+          <Card className="insights-link" aria-label="Stripe insights">
+            <div>
+              <h2 className="card__title">Stripe insights</h2>
+              <p className="card__subtitle">MRR and churn, cohorts, true margin per product, fee rates, Capital cost, recovery, and a 90-day cash forecast.</p>
+            </div>
+            <Link className="btn btn--secondary btn--sm" to={withGlobal("/stripe/insights", location.search)}>
+              Open insights <Icon name="arrowRight" size={15} />
+            </Link>
+          </Card>
 
           {needsReview > 0 || skippedCurrency > 0 ? (
             <p className="notice notice--warn" role="note">

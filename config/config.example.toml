@@ -26,7 +26,7 @@ business = true    # business mode UI/CLI (ledger, P&L, rules, reports)
 personal = true    # personal mode UI/CLI (`hpbooks personal`, /personal pages)
                    # at least one of business / personal must be true
 whmcs = false      # WHMCS billing import, reports, and PayPal reconciliation
-stripe = false     # Stripe balance import (revenue, refunds, fees) and payout reconciliation
+stripe = false     # Stripe balance import (revenue, refunds, fees), payout reconciliation, and business analytics
 # margins = false  # server margins; defaults to the whmcs value and needs whmcs = true
 
 # --- businesses ---------------------------------------------------------------------
@@ -221,6 +221,16 @@ paypal_account_role = "paypal"
 # label = "Capital loan 2026"       # optional display name
 # opening_principal = 12000.00   # optional: principal still owed on start_date when the proceeds predate your history
 # start_date = "2026-01-01"      # required with opening_principal
+
+# Business analytics (`hpbooks stripe metrics`, /api/stripe/metrics). All optional. See docs/stripe.md.
+# [stripe.metrics]
+# cogs = [{ category = "Hosting & Infrastructure", products = ["prod_..."] }]  # spend charged to these Stripe products
+# cogs_categories = ["Contractors"]   # spend spread over every product by revenue share
+# cac = 250.00                        # acquisition cost per new customer (for payback months)
+# cac_category = "Advertising"        # or: that category's 12-month spend / new customers
+# spike_factor = 2.0                  # refund spike: month's rate > factor x the 6-month median ...
+# spike_min = 50.00                   # ... and refunds of at least this much
+# forecast_days = 90                  # cash forecast horizon, 7 to 365
 
 # --- updates --------------------------------------------------------------------------
 [update]

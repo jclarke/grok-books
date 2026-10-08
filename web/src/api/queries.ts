@@ -18,6 +18,9 @@ import type {
   Rule,
   RulePreview,
   SearchResults,
+  StripeMetrics,
+  StripeMetricsSection,
+  StripeMetricsSectionResponse,
   StripePayouts,
   StripeSummary,
   TableReport,
@@ -248,6 +251,16 @@ export function useStripeSummary(p: Params, enabled = true) {
 
 export function useStripePayouts(p: Params, enabled = true) {
   return stripeQuery<StripePayouts>("payouts", "/stripe/payouts", p, enabled);
+}
+
+/** Business analytics (MRR, churn, cohorts, margins, fees, Capital, LTV, recovery, forecast): every section in one call. */
+export function useStripeMetrics(p: Params, enabled = true) {
+  return stripeQuery<StripeMetrics>("metrics", "/stripe/metrics", p, enabled);
+}
+
+/** One metrics section plus the summary KPIs (the dashboard card asks for "mrr"). */
+export function useStripeMetricsSection<S extends StripeMetricsSection>(section: S, p: Params, enabled = true) {
+  return stripeQuery<StripeMetricsSectionResponse<S>>(`metrics-${section}`, `/stripe/metrics/${section}`, p, enabled);
 }
 
 // --- Card and loan payments (both modes; the mode is always named, never inferred from the path) ---

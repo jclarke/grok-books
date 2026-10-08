@@ -749,6 +749,121 @@ CREATE INDEX IF NOT EXISTS idx_stripe_payouts_matched ON stripe_payouts(matched_
 CREATE INDEX IF NOT EXISTS idx_stripe_btx_booking ON stripe_balance_transactions(account, booking, created_ts);
 """
 
+# Stripe billing objects for the business analytics (stripe_metrics), from saved
+# GetCustomers / GetSubscriptions / GetInvoices / GetInvoicePayments / GetCharges /
+# GetPrices / GetProducts results (coupons: SCHEMA_V15). Only the whitelisted fields in
+# stripe_objects.WHITELIST reach these tables: no names, emails, addresses,
+# billing details, URLs, descriptions, or metadata. Times are unix seconds
+# (*_ts); amounts are cents in the object's currency. seen_on is the pull date of
+# the file a row came from, so an older file never overwrites newer data.
+SCHEMA_V14 = """
+CREATE TABLE IF NOT EXISTS stripe_customers (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  created_ts INTEGER, delinquent INTEGER, currency TEXT,
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_products (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  name TEXT, active INTEGER, created_ts INTEGER,
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_prices (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  product TEXT, nickname TEXT, active INTEGER, currency TEXT, unit_amount INTEGER,
+  interval TEXT, interval_count INTEGER, usage_type TEXT, created_ts INTEGER,
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_subscriptions (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  customer TEXT, status TEXT NOT NULL, currency TEXT,
+  created_ts INTEGER, start_ts INTEGER, canceled_ts INTEGER, ended_ts INTEGER, cancel_at_ts INTEGER,
+  cancel_at_period_end INTEGER NOT NULL DEFAULT 0, cancel_reason TEXT,
+  trial_start_ts INTEGER, trial_end_ts INTEGER,
+  current_period_start_ts INTEGER, current_period_end_ts INTEGER,
+  discounts_json TEXT NOT NULL DEFAULT '[]',
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_subscription_items (
+  account TEXT NOT NULL, id TEXT NOT NULL, subscription TEXT NOT NULL,
+  price TEXT, product TEXT, quantity INTEGER NOT NULL DEFAULT 1, unit_amount INTEGER, currency TEXT,
+  interval TEXT, interval_count INTEGER, usage_type TEXT,
+  current_period_start_ts INTEGER, current_period_end_ts INTEGER,
+  discounts_json TEXT NOT NULL DEFAULT '[]',
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_invoices (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  customer TEXT, subscription TEXT, status TEXT, billing_reason TEXT, currency TEXT,
+  amount_due INTEGER NOT NULL DEFAULT 0, amount_paid INTEGER NOT NULL DEFAULT 0, amount_remaining INTEGER NOT NULL DEFAULT 0,
+  attempt_count INTEGER NOT NULL DEFAULT 0, attempted INTEGER NOT NULL DEFAULT 0, next_payment_attempt_ts INTEGER,
+  created_ts INTEGER, paid_ts INTEGER, period_start_ts INTEGER, period_end_ts INTEGER,
+  charge TEXT, payment_intent TEXT,
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_invoice_lines (
+  account TEXT NOT NULL, invoice TEXT NOT NULL, line INTEGER NOT NULL,
+  id TEXT, amount INTEGER NOT NULL DEFAULT 0, discount INTEGER NOT NULL DEFAULT 0, currency TEXT,
+  price TEXT, product TEXT, quantity INTEGER, proration INTEGER NOT NULL DEFAULT 0,
+  period_start_ts INTEGER, period_end_ts INTEGER,
+  PRIMARY KEY (account, invoice, line)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_invoice_payments (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  invoice TEXT, amount_paid INTEGER, amount_requested INTEGER, status TEXT, currency TEXT,
+  created_ts INTEGER, paid_ts INTEGER,
+  payment_type TEXT, payment_intent TEXT, charge TEXT, payment_record TEXT,
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE TABLE IF NOT EXISTS stripe_charges (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  customer TEXT, status TEXT, currency TEXT,
+  amount INTEGER NOT NULL DEFAULT 0, amount_refunded INTEGER NOT NULL DEFAULT 0,
+  disputed INTEGER NOT NULL DEFAULT 0, created_ts INTEGER,
+  method TEXT, failure_code TEXT, outcome_type TEXT, network_status TEXT,
+  balance_transaction TEXT, payment_intent TEXT, invoice TEXT, refunds_json TEXT NOT NULL DEFAULT '[]',
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_stripe_subs_customer ON stripe_subscriptions(account, customer);
+CREATE INDEX IF NOT EXISTS idx_stripe_sub_items_sub ON stripe_subscription_items(account, subscription);
+CREATE INDEX IF NOT EXISTS idx_stripe_invoices_sub ON stripe_invoices(account, subscription, created_ts);
+CREATE INDEX IF NOT EXISTS idx_stripe_invoices_customer ON stripe_invoices(account, customer, created_ts);
+CREATE INDEX IF NOT EXISTS idx_stripe_inv_pay_invoice ON stripe_invoice_payments(account, invoice);
+CREATE INDEX IF NOT EXISTS idx_stripe_inv_pay_pi ON stripe_invoice_payments(account, payment_intent);
+CREATE INDEX IF NOT EXISTS idx_stripe_inv_pay_charge ON stripe_invoice_payments(account, charge);
+CREATE INDEX IF NOT EXISTS idx_stripe_charges_created ON stripe_charges(account, created_ts);
+CREATE INDEX IF NOT EXISTS idx_stripe_charges_btx ON stripe_charges(account, balance_transaction);
+CREATE INDEX IF NOT EXISTS idx_stripe_charges_pi ON stripe_charges(account, payment_intent);
+"""
+
+# Stripe coupons (GetCoupons), so discounts whose coupon is only an id (the current
+# API with expand data.discounts) can be resolved to their terms. Never the
+# coupon name: it often holds a person's name.
+SCHEMA_V15 = """
+CREATE TABLE IF NOT EXISTS stripe_coupons (
+  account TEXT NOT NULL, id TEXT NOT NULL,
+  percent_off REAL, amount_off INTEGER, currency TEXT, duration TEXT, duration_in_months INTEGER,
+  valid INTEGER, created_ts INTEGER,
+  seen_on TEXT NOT NULL, imported_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA_V1),
     (2, SCHEMA_V2),
@@ -763,6 +878,8 @@ MIGRATIONS = (
     (11, SCHEMA_V11),
     (12, SCHEMA_V12),
     (13, SCHEMA_V13),
+    (14, SCHEMA_V14),
+    (15, SCHEMA_V15),
 )
 
 # Keys the web UI is allowed to write. Values are plain text, never secrets.

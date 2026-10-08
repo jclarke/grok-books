@@ -35,6 +35,7 @@ const WhmcsCustomersPage = lazy(() => import("./pages/WhmcsCustomersPage"));
 const WhmcsCustomerPage = lazy(() => import("./pages/WhmcsCustomerPage"));
 const WhmcsMarginsPage = lazy(() => import("./pages/WhmcsMarginsPage"));
 const StripePage = lazy(() => import("./pages/StripePage"));
+const StripeInsightsPage = lazy(() => import("./pages/StripeInsightsPage"));
 const PersonalDashboardPage = lazy(() => import("./pages/personal/PersonalDashboardPage"));
 const NetWorthPage = lazy(() => import("./pages/personal/NetWorthPage"));
 const PersonalAccountsPage = lazy(() => import("./pages/personal/PersonalAccountsPage"));
@@ -155,6 +156,7 @@ export function AppRoutes() {
             <Route path="/whmcs/customers" element={<Gated><WhmcsCustomersPage /></Gated>} />
             <Route path="/whmcs/customers/:brand/:id" element={<Gated><WhmcsCustomerPage /></Gated>} />
             <Route path="/stripe" element={<Gated><StripePage /></Gated>} />
+            <Route path="/stripe/insights" element={<Gated><StripeInsightsPage /></Gated>} />
             <Route path="/personal" element={<PersonalDashboardPage />} />
             <Route path="/personal/net-worth" element={<NetWorthPage />} />
             <Route path="/personal/accounts" element={<PersonalAccountsPage />} />

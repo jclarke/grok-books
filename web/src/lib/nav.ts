@@ -41,7 +41,8 @@ export const NAV: NavItem[] = [
   { to: "/whmcs/reconciliation", label: "PayPal reconciliation", icon: "scale", section: "WHMCS", requires: ["whmcs"], paletteLabel: "WHMCS PayPal reconciliation" },
   { to: "/whmcs/margins", label: "Server margins", icon: "server", section: "WHMCS", requires: ["whmcs", "margins"], paletteLabel: "WHMCS server margins" },
   { to: "/whmcs/customers", label: "Customers", icon: "users", section: "WHMCS", requires: ["whmcs"], paletteLabel: "WHMCS customer lookup" },
-  { to: "/stripe", label: "Stripe", icon: "card", section: "Stripe", requires: ["stripe"], paletteLabel: "Stripe revenue, fees, and payouts" },
+  { to: "/stripe", label: "Stripe", icon: "card", section: "Stripe", requires: ["stripe"], exact: true, paletteLabel: "Stripe revenue, fees, and payouts" },
+  { to: "/stripe/insights", label: "Insights", icon: "trendingUp", section: "Stripe", requires: ["stripe"], paletteLabel: "Stripe insights: MRR, churn, margins, and cash forecast" },
 ];
 
 /** Personal mode navigation. The business list above is unchanged. */

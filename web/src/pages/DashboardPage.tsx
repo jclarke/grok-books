@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
-import { useDashboard, useStripeSummary, useWhmcsSummary } from "../api/queries";
+import { useDashboard, useStripeMetricsSection, useStripeSummary, useWhmcsSummary } from "../api/queries";
 import type { Dashboard } from "../api/types";
 import { Badge } from "../components/Badge";
 import { Card, CardHeader } from "../components/Card";
@@ -18,7 +18,7 @@ import { useConfig } from "../hooks/useConfig";
 import { useGlobalFilters, withGlobal } from "../hooks/useGlobalFilters";
 import { monthEnd, monthStart } from "../lib/dates";
 import { shownCents, sourceLabel } from "../lib/balances";
-import { formatDate, formatMoney, formatPct, formatRange, formatTimestamp, pluralize } from "../lib/format";
+import { formatDate, formatMoney, formatMonth, formatPct, formatRange, formatTimestamp, pluralize } from "../lib/format";
 import { businessLabel } from "../lib/labels";
 import { joinList } from "../lib/siteConfig";
 
@@ -296,6 +296,8 @@ function WhmcsWidget({ to }: { to: string }) {
 function StripeWidget({ to, params }: { to: string; params: { start: string; end: string; business: string } }) {
   const query = useStripeSummary(params);
   const data = query.data;
+  // MRR and churn for the last complete month (the insights default), once billing data exists.
+  const metrics = useStripeMetricsSection("mrr", { business: params.business }, Boolean(data?.ready)).data;
   if (!data || !data.ready) return null;
   // Open payouts and bank-only deposits are different things: count them apart.
   const issues = [
@@ -329,6 +331,22 @@ function StripeWidget({ to, params }: { to: string; params: { start: string; end
           )}
         </div>
       </div>
+      {metrics?.ready && metrics.summary.mrr_cents > 0 ? (
+        <p className="whmcs-widget__brands stripe-widget__mrr">
+          <span>
+            <span className="strong">MRR</span> <Money cents={metrics.summary.mrr_cents} /> · {formatMonth(metrics.month)}
+          </span>
+          <span>
+            <span className="strong">Customer churn</span> {formatPct(metrics.summary.customer_churn_pct)}
+          </span>
+          <span>
+            <span className="strong">Net new</span> <Money cents={metrics.summary.net_new_mrr_cents} signed colorPositive />
+          </span>
+          <Link className="link-quiet" to={to.replace(/^\/stripe/, "/stripe/insights")}>
+            Insights
+          </Link>
+        </p>
+      ) : null}
     </Card>
   );
 }
