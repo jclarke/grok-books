@@ -193,7 +193,7 @@ def main_files(folder: Path, *, pages: int = 2) -> list[Path]:
     return paths
 
 
-def bank_feed(path: Path, account: str, rows: list[tuple[str, str, int, str]]) -> Path:
+def bank_feed(path: Path, account: str, rows: list[tuple[str, str, int, str]], *, date_from: str = "2026-09-01", date_to: str = "2026-09-30") -> Path:
     """A Finance result for the bank side: (id, date, cents, name)."""
     txns = [
         {"id": txn_id, "account_id": account, "date": day, "amount": f"{cents / 100:.2f}", "name": name, "pending": False}
@@ -201,7 +201,74 @@ def bank_feed(path: Path, account: str, rows: list[tuple[str, str, int, str]]) -
     ]
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps({"source": "finance-mcp", "account_id": account, "date_from": "2026-09-01", "date_to": "2026-09-30", "transactions": txns}),
+        json.dumps({"source": "finance-mcp", "account_id": account, "date_from": date_from, "date_to": date_to, "transactions": txns}),
         encoding="utf-8",
     )
     return path
+
+
+# --- Stripe Capital: one flex loan, flxln_TEST0001 -------------------------------------------
+
+LOAN = "flxln_TEST0001"
+
+
+def day_after(day: str, days: int) -> str:
+    from datetime import date, timedelta
+
+    return (date.fromisoformat(day) + timedelta(days=days)).isoformat()
+
+
+def capital_payout(txn_id: str, amount: int, day: str, *, description: str = "Stripe Capital financing") -> dict:
+    return btx(txn_id, "financing_payout", amount, day, category="financing", source="fnpay_TEST0001", description=description)
+
+
+def paydown(txn_id: str, amount: int, day: str, *, loan: str | None = LOAN, charge: str = "ch_TEST0001", source: str | None = None, hour: int = 12) -> dict:
+    """A repayment withheld from a sale; `amount` is the positive sum withheld."""
+    text = f"Withheld funds from {charge} to pay down flex loan {loan}" if loan else "Capital repayment"
+    return btx(txn_id, "financing_paydown", -amount, day, category="financing", source=source, description=text, hour=hour)
+
+
+def capital_rows(*, count: int, amount: int = 100_000, start: str = "2026-03-02", proceeds: int | None = 2_000_000, loan: str | None = LOAN) -> list[dict]:
+    """Proceeds (unless None) on `start`, then `count` daily paydowns of `amount` cents."""
+    rows = []
+    if proceeds is not None:
+        rows.append(capital_payout("txn_TESTCAP000", proceeds, start))
+    for n in range(1, count + 1):
+        rows.append(paydown(f"txn_TESTCAP{n:03d}", amount, day_after(start, n), loan=loan, charge=f"ch_TESTCAP{n:03d}", source=f"fnpd_TESTCAP{n:03d}"))
+    return list(reversed(rows))
+
+
+# --- payout backfill: one payout every `step` days, each with its own amount -----------------
+
+
+def backfill(start: str, count: int, *, step: int = 7, base_cents: int = 10_000) -> list[dict]:
+    """[{"payout", "btx", "bank"}] in date order: a payout of base + n dollars created on day n x step,
+    arriving two days later, and the bank deposit of it on the arrival day."""
+    out = []
+    for n in range(count):
+        created = day_after(start, n * step)
+        arrival = day_after(created, 2)
+        cents = base_cents + n * 100
+        po, txn = f"po_TESTBF{n:04d}", f"txn_TESTBF{n:04d}"
+        out.append(
+            {
+                "month": created[:7],
+                "payout": payout(po, cents, created, arrival, btx_id=txn),
+                "btx": btx(txn, "payout", -cents, created, source=po, description="STRIPE PAYOUT"),
+                "bank": (f"bank-bf{n:04d}", arrival, cents, f"STRIPE TRANSFER ST-BF{n:04d}"),
+            }
+        )
+    return out
+
+
+def write_backfill(folder: Path, items: list[dict], *, first_page: int = 1) -> int:
+    """Month by month, the way the backfill step saves them: <name>_<n>.json and
+    <name>_payouts_<n>.json with a running page number. Returns the next page number."""
+    page_no = first_page
+    for month in sorted({item["month"] for item in items}):
+        chunk = [item for item in items if item["month"] == month]
+        query = {"stripe_account": MAIN, "livemode": True}
+        write(folder, f"main_{page_no}.json", page([item["btx"] for item in reversed(chunk)], query=query))
+        write(folder, f"main_payouts_{page_no}.json", page([item["payout"] for item in reversed(chunk)], url="/v1/payouts", query=query))
+        page_no += 1
+    return page_no

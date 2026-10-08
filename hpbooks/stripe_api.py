@@ -52,6 +52,14 @@ def payouts():
     return jsonify({"ok": True, **data})
 
 
+@stripe_api.get("/capital")
+def capital():
+    args = _args()
+    with connect(readonly=True) as conn:
+        data = sr.capital(conn, business=args["business"], account=args["account"])
+    return jsonify({"ok": True, **data})
+
+
 @stripe_api.get("/status")
 def status():
     account = (request.args.get("account") or "").strip() or None

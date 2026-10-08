@@ -168,6 +168,17 @@ Only when `features.stripe = true` in the config, with one `[[stripe.accounts]]`
 
 You may add a `_query` object to each saved file (`stripe_account`, `livemode`, `created_gte`, `created_lt`); the import refuses a file whose `stripe_account` is not the entry's `stripe_account`, and any file marked `livemode: false` (in `_query` or in the results). The import is idempotent: the overlapping 10-day window updates rows in place (a `pending` charge that became `available` is updated, not duplicated).
 
-### First Stripe load (backfill)
+### First Stripe load (backfill payouts)
 
-Pull month-by-month windows from the date the books start: `created.gte` = unix start of the 1st of each month and `created.lt` = the 1st of the next month (books time zone), paging each window with `starting_after`. Save the pages with a running number as `sync/inbox/backfill-stripe/stripe/<name>_<n>.json` and the payouts as `<name>_payouts_<n>.json`, then run `bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/` and `bin/hpbooks stripe reconcile --from <books start> --to <today>`.
+Pull everything from the date the books start, one calendar month per window, so payouts reconcile against the bank history you already imported:
+
+1. For each `[[stripe.accounts]]` entry and each month from the books' start date to today: `GetBalanceTransactions` **and** `GetPayouts` with `{"limit": 100, "created": {"gte": <unix start of the 1st of the month>, "lt": <unix start of the 1st of the next month>}}` (books time zone), paging each window with `"starting_after": "<id of the last item in data>"` while `has_more` is true.
+2. Save the pages with one running number per account across all months: `sync/inbox/backfill-stripe/stripe/<name>_<n>.json` for balance transactions and `<name>_payouts_<n>.json` for payouts.
+3. Import and reconcile:
+
+   ```bash
+   bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/
+   bin/hpbooks stripe reconcile --from <books start> --rows
+   ```
+
+The import is idempotent, so overlapping windows and a second run (for example older months pulled later) are fine. Payouts are matched by their own arrival date, never today's. Expect **matched** for payouts whose deposit is in the bank history, **no_bank_history** for payouts that arrived before the first imported row of their bank account(s) (they match once older bank history is imported), and **in_transit** only for the last few days. Stripe-looking deposits the rules booked as revenue before Stripe was on pair automatically when their payout is imported; anything still under **bank only** needs a look. Details: [docs/stripe.md](../docs/stripe.md#backfill-payouts).

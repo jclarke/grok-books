@@ -160,6 +160,41 @@ class StripeAccount:
 
 
 @dataclass(frozen=True)
+class StripeCapital:
+    """Terms of one Stripe Capital financing: principal plus one flat fee, repaid pro rata.
+
+    financing None is the account's default entry: it takes that account's Capital
+    rows that match no other entry (and rows whose description names no financing).
+    """
+
+    account: str
+    principal_cents: int
+    fee_cents: int | None = None  # as configured; use fee_total_cents
+    financing: str | None = None
+    fee_rate: float | None = None
+    label: str = ""
+    opening_principal_cents: int | None = None
+    start_date: str | None = None
+
+    @property
+    def fee_total_cents(self) -> int:
+        """The flat fee: `fee`, or principal x fee_rate rounded half up to the cent."""
+        if self.fee_rate is None:
+            return int(self.fee_cents or 0)
+        from decimal import ROUND_HALF_UP, Decimal
+
+        return int((Decimal(self.principal_cents) * Decimal(str(self.fee_rate))).quantize(Decimal(1), rounding=ROUND_HALF_UP))
+
+    @property
+    def key(self) -> str:
+        return self.financing or "default"
+
+    @property
+    def display(self) -> str:
+        return self.label or self.financing or "Stripe Capital"
+
+
+@dataclass(frozen=True)
 class StripeConfig:
     fee_category: str = "Payment Processing Fees"
     payout_match: str = "(?i)stripe"
@@ -167,13 +202,18 @@ class StripeConfig:
     secret: str | None = None
     books_currency: str = "usd"
     timezone: str = "America/New_York"
+    capital_fee_category: str = ""  # resolved when on: "Interest" if that category exists, else fee_category
     accounts: tuple[StripeAccount, ...] = ()
+    capital: tuple[StripeCapital, ...] = ()
 
     def account(self, name: str) -> StripeAccount | None:
         for item in self.accounts:
             if item.name == name:
                 return item
         return None
+
+    def capital_for(self, name: str) -> tuple[StripeCapital, ...]:
+        return tuple(item for item in self.capital if item.account == name)
 
 
 @dataclass(frozen=True)
@@ -582,6 +622,33 @@ def _stripe(raw) -> StripeConfig:
                 secret=_str_or_none(item, "secret", aw),
             )
         )
+    capital_raw = raw.get("capital", []) or []
+    if not isinstance(capital_raw, list):
+        raise ConfigError("stripe.capital must be a list of [[stripe.capital]] tables")
+    capital = []
+    for index, item in enumerate(capital_raw):
+        cw = f"stripe.capital[{index}]"
+        if not isinstance(item, dict):
+            raise ConfigError(f"{cw} must be a table")
+        account = _get(item, "account", str, None, cw)
+        if not account:
+            raise ConfigError(f"{cw} needs account")
+        if "principal" not in item:
+            raise ConfigError(f"{cw} needs principal")
+        rate = _get(item, "fee_rate", float, None, cw)
+        start = _str_or_none(item, "start_date", cw)
+        capital.append(
+            StripeCapital(
+                account=account,
+                principal_cents=_dollars(item, "principal", cw),
+                fee_cents=_dollars(item, "fee", cw) if "fee" in item else None,
+                financing=_str_or_none(item, "financing", cw),
+                fee_rate=rate,
+                label=_get(item, "label", str, "", cw),
+                opening_principal_cents=_dollars(item, "opening_principal", cw) if "opening_principal" in item else None,
+                start_date=start,
+            )
+        )
     window = _get(raw, "payout_window_days", int, defaults.payout_window_days, where)
     if window < 0 or window > 31:
         raise ConfigError("stripe.payout_window_days must be 0 to 31")
@@ -592,8 +659,26 @@ def _stripe(raw) -> StripeConfig:
         secret=_str_or_none(raw, "secret", where),
         books_currency=(_get(raw, "books_currency", str, defaults.books_currency, where) or "usd").lower(),
         timezone=_get(raw, "timezone", str, defaults.timezone, where),
+        capital_fee_category=_get(raw, "capital_fee_category", str, defaults.capital_fee_category, where),
         accounts=tuple(accounts),
+        capital=tuple(capital),
     )
+
+
+def _dollars(table: dict, key: str, where: str) -> int:
+    """A dollar amount (number) as integer cents, at most two decimal places."""
+    from decimal import Decimal, InvalidOperation
+
+    value = table.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ConfigError(f"{where}.{key} must be a dollar amount")
+    try:
+        cents = Decimal(str(value)) * 100
+    except InvalidOperation as exc:
+        raise ConfigError(f"{where}.{key} must be a dollar amount") from exc
+    if cents != cents.to_integral_value():
+        raise ConfigError(f"{where}.{key} has more than two decimal places")
+    return int(cents)
 
 
 def _check_stripe(stripe: StripeConfig, businesses, revenue, every_category) -> StripeConfig:
@@ -636,7 +721,62 @@ def _check_stripe(stripe: StripeConfig, businesses, revenue, every_category) -> 
         if acct.stripe_account is not None and not acct.stripe_account.startswith("acct_"):
             raise ConfigError(f"{aw}.stripe_account must start with acct_")
         out.append(replace(acct, revenue_category=category))
-    return replace(stripe, accounts=tuple(out))
+    fee_category = stripe.capital_fee_category or ("Interest" if "Interest" in every_category else stripe.fee_category)
+    if fee_category not in every_category:
+        raise ConfigError(f"stripe.capital_fee_category {fee_category!r} is not a category")
+    if fee_category in revenue or fee_category == REFUNDS:
+        raise ConfigError("stripe.capital_fee_category must be an expense category")
+    return replace(stripe, accounts=tuple(out), capital=_check_capital(stripe.capital, seen), capital_fee_category=fee_category)
+
+
+_FINANCING_RE = re.compile(r"^[A-Za-z0-9_]{3,64}$")
+
+
+def _check_capital(entries, account_names: set[str]) -> tuple[StripeCapital, ...]:
+    """Validate [[stripe.capital]] entries."""
+    out = []
+    keys: set[tuple[str, str | None]] = set()
+    for index, entry in enumerate(entries):
+        cw = f"stripe.capital[{index}]"
+        if entry.account not in account_names:
+            raise ConfigError(f"{cw}.account {entry.account!r} is not a [[stripe.accounts]] name")
+        if entry.financing is not None and not _FINANCING_RE.fullmatch(entry.financing):
+            raise ConfigError(f"{cw}.financing must be a Stripe financing id such as flxln_...")
+        key = (entry.account, entry.financing)
+        if key in keys:
+            which = f"financing {entry.financing!r}" if entry.financing else "default entry (no financing)"
+            raise ConfigError(f"stripe.capital has a repeated {which} for account {entry.account!r}")
+        keys.add(key)
+        if entry.principal_cents <= 0:
+            raise ConfigError(f"{cw}.principal must be more than zero")
+        if (entry.fee_cents is None) == (entry.fee_rate is None):
+            raise ConfigError(f"{cw} needs exactly one of fee and fee_rate")
+        if entry.fee_rate is not None and not 0 <= entry.fee_rate < 1:
+            raise ConfigError(f"{cw}.fee_rate must be from 0 to less than 1 (0.10 is 10%)")
+        if entry.fee_cents is not None and entry.fee_cents < 0:
+            raise ConfigError(f"{cw}.fee must not be negative")
+        opening = entry.opening_principal_cents
+        if (opening is None) != (entry.start_date is None):
+            raise ConfigError(f"{cw}: opening_principal and start_date go together")
+        if opening is not None:
+            if not 0 <= opening <= entry.principal_cents:
+                raise ConfigError(f"{cw}.opening_principal must be from 0 to principal")
+            if not _is_day(entry.start_date):
+                raise ConfigError(f"{cw}.start_date must be YYYY-MM-DD")
+        out.append(entry)
+    return tuple(out)
+
+
+def _is_day(text: str) -> bool:
+    from datetime import date
+
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return False
+    try:
+        date.fromisoformat(text)
+    except ValueError:
+        return False
+    return True
 
 
 def _payer_hints(raw) -> tuple[PayerHint, ...]:

@@ -1,6 +1,6 @@
 import { exportUrl } from "../api/client";
 import { useStripePayouts, useStripeSummary } from "../api/queries";
-import type { StripeAccountSummary, StripeBankDeposit, StripeMonth, StripePayoutRow, StripePayoutStatus, StripeSummary } from "../api/types";
+import type { StripeAccountSummary, StripeBankDeposit, StripeCapital, StripeCapitalFinancing, StripeMonth, StripePayoutRow, StripePayoutStatus, StripeSummary } from "../api/types";
 import { Badge } from "../components/Badge";
 import { Card, CardHeader } from "../components/Card";
 import { ComboChart } from "../components/charts/ComboChart";
@@ -24,6 +24,7 @@ export const PAYOUT_STATUS: Record<StripePayoutStatus, { label: string; tone: To
   conflict: { label: "Conflict", tone: "neg" },
   failed: { label: "Failed", tone: "neg" },
   skipped: { label: "Skipped", tone: "neutral" },
+  no_bank_history: { label: "No bank history", tone: "neutral" },
 };
 
 /** "4.00% of gross"; fee_pct is null when there was no gross. */
@@ -50,6 +51,71 @@ function StripeCsvLink({ table, params, label }: { table: string; params: Params
 function Pct({ value }: { value: number | null }) {
   if (value === null || value === undefined) return <span className="muted">—</span>;
   return <span className="num">{value.toFixed(2)}%</span>;
+}
+
+function MoneyOrDash({ cents }: { cents: number | null | undefined }) {
+  if (cents === null || cents === undefined) return <span className="muted">—</span>;
+  return <Money cents={cents} />;
+}
+
+const capitalColumns: Column<StripeCapitalFinancing>[] = [
+  {
+    key: "label",
+    header: "Financing",
+    accessor: (row) => row.label,
+    cell: (row) => (
+      <span>
+        {row.label}
+        {row.financing && row.financing !== row.label ? <> <code className="code-chip">{row.financing}</code></> : null}
+        {!row.terms ? <> <Badge tone="warn">No terms</Badge></> : null}
+      </span>
+    ),
+  },
+  { key: "principal", header: "Principal", accessor: (row) => row.principal_cents, cell: (row) => <MoneyOrDash cents={row.principal_cents} />, align: "right" },
+  { key: "fee", header: "Fee", accessor: (row) => row.fee_cents, cell: (row) => <MoneyOrDash cents={row.fee_cents} />, align: "right" },
+  { key: "repaid", header: "Repaid principal", accessor: (row) => row.repaid_principal_cents, cell: (row) => <MoneyOrDash cents={row.repaid_principal_cents} />, align: "right", hideOnMobile: true },
+  { key: "fee_booked", header: "Fee booked", accessor: (row) => row.fee_booked_cents, cell: (row) => <MoneyOrDash cents={row.terms ? row.fee_booked_cents : null} />, align: "right", hideOnMobile: true },
+  { key: "outstanding", header: "Outstanding", accessor: (row) => row.principal_outstanding_cents, cell: (row) => <MoneyOrDash cents={row.principal_outstanding_cents} />, align: "right" },
+  {
+    key: "pct",
+    header: "Repaid",
+    accessor: (row) => row.pct_repaid,
+    cell: (row) => (row.pct_repaid === null ? <span className="muted">—</span> : <span className="num">{row.pct_repaid.toFixed(1)}%</span>),
+    align: "right",
+  },
+];
+
+/** Stripe Capital: lifetime figures per financing, the missing-terms warning, and the range's repayments. */
+function CapitalCard({ capital, totals }: { capital: StripeCapital | undefined; totals: StripeSummary["totals"] }) {
+  const financings = capital?.financings ?? [];
+  const others = (capital?.warnings ?? []).filter((text) => !capital?.missing_terms_message || !text.includes(capital.missing_terms_message));
+  return (
+    <Card padded={false} className="table-section" as="section" aria-label="Stripe Capital">
+      <div className="table-section__head">
+        <CardHeader
+          title="Stripe Capital"
+          subtitle="A loan, not revenue: principal repayments move to the loan account and the fee is booked as interest. Lifetime figures."
+        />
+      </div>
+      {capital?.missing_terms ? (
+        <p className="notice notice--warn" role="note">
+          <Icon name="info" size={16} /> {capital.missing_terms_message}. <Money cents={capital.unsplit_cents} /> of repayments are booked whole as transfers, so the fee is not in the P&amp;L yet.
+        </p>
+      ) : null}
+      {others.map((text) => (
+        <p key={text} className="notice notice--warn" role="note">
+          <Icon name="info" size={16} /> {text}
+        </p>
+      ))}
+      {financings.length > 0 ? (
+        <DataTable caption="Stripe Capital by financing" columns={capitalColumns} rows={financings} rowKey={(row) => `${row.account}:${row.key}`} dense />
+      ) : null}
+      <dl className="whmcs-facts">
+        <div><dt>Repaid in this range</dt><dd><Money cents={totals.capital_repayments_cents} /></dd></div>
+        <div><dt>Proceeds in this range</dt><dd><Money cents={totals.capital_proceeds_cents} /></dd></div>
+      </dl>
+    </Card>
+  );
 }
 
 function BankDeposit({ bank }: { bank: StripeBankDeposit }) {
@@ -122,7 +188,8 @@ export default function StripePage() {
     { key: "amount", header: "Amount", accessor: (row) => row.amount_cents, format: "money", sortable: true },
   ];
 
-  const capital = totals && (totals.capital_repayments_cents !== 0 || totals.capital_proceeds_cents !== 0);
+  const capitalData = summary?.ready ? summary.capital : undefined;
+  const capital = totals && ((capitalData?.financings.length ?? 0) > 0 || totals.capital_repayments_cents !== 0 || totals.capital_proceeds_cents !== 0);
   const needsReview = summary?.ready ? summary.accounts.reduce((acc, row) => acc + (row.needs_review ?? 0), 0) : 0;
   const skippedCurrency = summary?.ready ? summary.accounts.reduce((acc, row) => acc + (row.skipped_currency ?? 0), 0) : 0;
 
@@ -172,15 +239,7 @@ export default function StripePage() {
             </p>
           ) : null}
 
-          {capital && totals ? (
-            <Card as="section" aria-label="Stripe Capital">
-              <CardHeader title="Stripe Capital" subtitle="Loan money, not revenue. Repayments are withheld from sales before payout." />
-              <dl className="whmcs-facts">
-                <div><dt>Repaid from sales</dt><dd><Money cents={totals.capital_repayments_cents} /></dd></div>
-                <div><dt>Loan proceeds received</dt><dd><Money cents={totals.capital_proceeds_cents} /></dd></div>
-              </dl>
-            </Card>
-          ) : null}
+          {capital && totals ? <CapitalCard capital={capitalData} totals={totals} /> : null}
 
           {summary?.ready && summary.accounts.length > 1 ? (
             <Card padded={false} className="table-section">

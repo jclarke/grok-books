@@ -198,6 +198,7 @@ paypal_account_role = "paypal"
 # books_currency = "usd"                     # rows in another currency are stored but not posted
 # timezone = "America/New_York"              # Stripe timestamps become ledger dates in this zone
 # secret = "stripe.secret"                   # optional direct-API mode: restricted read-only key in data/
+# capital_fee_category = "Interest"          # Stripe Capital fee (default "Interest" if that category exists, else fee_category)
 #
 # [[stripe.accounts]]
 # name = "main"                  # lowercase letters, digits, -: file prefix in sync/inbox/.../stripe/<name>_N.json and CLI --account
@@ -208,6 +209,18 @@ paypal_account_role = "paypal"
 # revenue_category = "Revenue - Sales"   # default: the business's revenue_category, else the first revenue category
 # payout_account = "0001"        # optional: last 4 or id of the bank account payouts land in (default: any business cash account)
 # secret = "stripe_main.secret"  # optional: this account's own key file for `stripe sync`
+#
+# Stripe Capital: one entry per financing, from the offer / loan agreement (Dashboard > Capital).
+# Repayments are split pro rata into principal (a transfer to the loan account stripe-<name>-capital)
+# and fee (capital_fee_category, in the P&L). Without an entry repayments stay whole transfers.
+# [[stripe.capital]]
+# account = "main"               # a [[stripe.accounts]] name
+# financing = "flxln_..."        # optional: the id in "... pay down flex loan flxln_..."; omitted = this account's default
+# principal = 20000.00           # amount received
+# fee = 2000.00                  # the flat fee; or fee_rate = 0.10 (fee = principal x rate); exactly one of the two
+# label = "Capital loan 2026"       # optional display name
+# opening_principal = 12000.00   # optional: principal still owed on start_date when the proceeds predate your history
+# start_date = "2026-01-01"      # required with opening_principal
 
 # --- updates --------------------------------------------------------------------------
 [update]

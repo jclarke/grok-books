@@ -945,7 +945,55 @@ export interface StripeMonth extends StripeFigures {
   month: string;
 }
 
-export type StripePayoutStatus = "matched" | "in_transit" | "unmatched" | "ambiguous" | "conflict" | "failed" | "skipped";
+export type StripePayoutStatus = "matched" | "in_transit" | "unmatched" | "ambiguous" | "conflict" | "failed" | "skipped" | "no_bank_history";
+
+/** One Stripe Capital financing (lifetime figures, not the date range). Money is cents; null when not known (no terms). */
+export interface StripeCapitalFinancing {
+  account: string;
+  account_label: string;
+  business: string;
+  key: string;
+  financing: string | null;
+  financing_ids: string[];
+  label: string;
+  /** false: no [[stripe.capital]] terms, so repayments are not split into principal and fee */
+  terms: boolean;
+  principal_cents: number | null;
+  fee_cents: number | null;
+  fee_rate: number | null;
+  proceeds_cents: number;
+  opening_principal_cents: number | null;
+  paid_cents: number;
+  repaid_principal_cents: number | null;
+  fee_booked_cents: number;
+  fee_remaining_cents: number | null;
+  principal_outstanding_cents: number | null;
+  pct_repaid: number | null;
+  loan_account_id: string;
+  unsplit_cents: number;
+  first_date: string | null;
+  last_date: string | null;
+  warnings: string[];
+}
+
+export interface StripeCapital {
+  financings: StripeCapitalFinancing[];
+  loans: {
+    account: string;
+    account_label: string;
+    business: string;
+    loan_account_id: string;
+    /** Amount owed on the loan account; null before it exists. */
+    loan_balance_cents: number | null;
+    expected_cents: number;
+    conflicts: { balance_transaction: string; reason: string }[];
+  }[];
+  warnings: string[];
+  missing_terms: boolean;
+  missing_terms_message: string | null;
+  /** Repayments booked whole as transfers because no terms are configured */
+  unsplit_cents: number;
+}
 
 export interface StripeSummary {
   ok: true;
@@ -960,6 +1008,8 @@ export interface StripeSummary {
   /** unmatched + ambiguous + conflict */
   open_payouts: number;
   bank_only: number;
+  /** Stripe Capital per financing; absent from older servers */
+  capital?: StripeCapital;
 }
 
 export interface StripeBankDeposit {

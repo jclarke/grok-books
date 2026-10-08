@@ -66,7 +66,7 @@ HOLD_TYPES = {
 HOLD_CATEGORIES = {"payout_minimum_balance_hold", "payout_minimum_balance_release", "risk_reserved_funds", "connect_reserved_funds"}
 
 BOOKINGS = ("revenue", "refund", "dispute", "fee", "payout", "payout_return", "hold", "capital", "unknown", "skipped_currency")
-MATCH_STATUSES = ("matched", "in_transit", "unmatched", "ambiguous", "conflict", "failed", "skipped")
+MATCH_STATUSES = ("matched", "in_transit", "unmatched", "ambiguous", "conflict", "failed", "skipped", "no_bank_history")
 
 _FILE_RE = re.compile(r"^(?P<name>[a-z0-9][a-z0-9-]*?)(?:_(?P<kind>payouts|charges|balance))?(?:_(?P<page>\d+))?$")
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -553,15 +553,14 @@ def _fee_assignment(acct: StripeAccount, cfg: StripeConfig, btx: dict) -> tuple[
     return acct.business, cfg.fee_category, CONFIDENCE, f"Stripe fee on {btx['source_id'] or btx['id']}"
 
 
-def _ledger_rows(acct: StripeAccount, cfg: StripeConfig, btx: dict) -> list[dict]:
-    word = _TYPE_WORDS.get(btx["type"], btx["type"].replace("_", " "))
-    ref = btx["source_id"] or btx["id"]
+def ledger_base(acct: StripeAccount, cfg: StripeConfig, btx: dict) -> dict:
+    """Fields every ledger row of this balance transaction shares."""
     raw = json.dumps(
         {key: btx[key] for key in ("id", "type", "reporting_category", "amount_cents", "fee_cents", "net_cents", "currency", "status", "source_id", "available_on")},
         separators=(",", ":"),
         sort_keys=True,
     )
-    base = {
+    return {
         "account_id": acct.ledger_id,
         "date": btx["created"],
         "currency": cfg.books_currency.upper(),
@@ -569,6 +568,30 @@ def _ledger_rows(acct: StripeAccount, cfg: StripeConfig, btx: dict) -> list[dict
         "provider_category": btx.get("reporting_category") or btx["type"],
         "raw_json": raw,
     }
+
+
+def fee_row(acct: StripeAccount, cfg: StripeConfig, btx: dict, base: dict) -> dict | None:
+    """The row for the balance transaction's own Stripe fee field, or None."""
+    fee = int(btx["fee_cents"])
+    if fee == 0:
+        return None
+    ref = btx["source_id"] or btx["id"]
+    tag, category, confidence, note = _fee_assignment(acct, cfg, btx)
+    return {
+        **base,
+        "id": txn_id(acct, btx["id"], "fee"),
+        "amount_cents": -fee,
+        "direction": "in" if fee < 0 else "out",
+        "name": "Stripe fee tax" if btx["booking"] == "fee" else f"Stripe fee {ref}",
+        "description": note,
+        "assign": (tag, category, confidence, note),
+    }
+
+
+def _ledger_rows(acct: StripeAccount, cfg: StripeConfig, btx: dict) -> list[dict]:
+    word = _TYPE_WORDS.get(btx["type"], btx["type"].replace("_", " "))
+    ref = btx["source_id"] or btx["id"]
+    base = ledger_base(acct, cfg, btx)
     amount = int(btx["amount_cents"])
     rows = []
     if amount != 0:
@@ -584,20 +607,9 @@ def _ledger_rows(acct: StripeAccount, cfg: StripeConfig, btx: dict) -> list[dict
                 "assign": (tag, category, confidence, note),
             }
         )
-    fee = int(btx["fee_cents"])
-    if fee != 0:
-        tag, category, confidence, note = _fee_assignment(acct, cfg, btx)
-        rows.append(
-            {
-                **base,
-                "id": txn_id(acct, btx["id"], "fee"),
-                "amount_cents": -fee,
-                "direction": "in" if fee < 0 else "out",
-                "name": "Stripe fee tax" if btx["booking"] == "fee" else f"Stripe fee {ref}",
-                "description": note,
-                "assign": (tag, category, confidence, note),
-            }
-        )
+    fee = fee_row(acct, cfg, btx, base)
+    if fee is not None:
+        rows.append(fee)
     return rows
 
 
@@ -608,43 +620,61 @@ def post_ledger(conn, acct: StripeAccount, cfg: StripeConfig, btx: dict) -> dict
     """Insert or refresh this balance transaction's ledger rows. Manual classifications are kept."""
     counts = {"inserted": 0, "updated": 0, "unchanged": 0}
     for row in _ledger_rows(acct, cfg, btx):
-        existing = conn.execute("SELECT * FROM transactions WHERE id = ?", (row["id"],)).fetchone()
-        ts = now_iso()
-        if existing is None:
-            conn.execute(
-                """
-                INSERT INTO transactions (
-                  id, account_id, date, amount_cents, direction, currency, name, merchant_name, description,
-                  pending, provider_category, raw_json, status, superseded_by, first_seen_at, last_seen_at,
-                  updated_at, source
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'active', NULL, ?, ?, ?, ?)
-                """,
-                (
-                    row["id"], row["account_id"], row["date"], row["amount_cents"], row["direction"], row["currency"],
-                    row["name"], row["merchant_name"], row["description"], row["provider_category"], row["raw_json"],
-                    ts, ts, ts, SOURCE,
-                ),
-            )
-            counts["inserted"] += 1
-        elif any(existing[field] != row[field] for field in _LEDGER_FIELDS) or existing["status"] != "active":
-            conn.execute(
-                f"""
-                UPDATE transactions SET {", ".join(f"{field} = ?" for field in _LEDGER_FIELDS)},
-                  raw_json = ?, status = 'active', superseded_by = NULL, last_seen_at = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (*(row[field] for field in _LEDGER_FIELDS), row["raw_json"], ts, ts, row["id"]),
-            )
-            counts["updated"] += 1
-        else:
-            conn.execute("UPDATE transactions SET raw_json = ?, last_seen_at = ? WHERE id = ?", (row["raw_json"], ts, row["id"]))
-            counts["unchanged"] += 1
-        tag, category, confidence, note = row["assign"]
-        write_classification(
-            conn, row["id"], tag, category, "rule", confidence, note, None,
-            overwrite_manual=False, actor="stripe", audit_write=False,
-        )
+        counts[upsert_ledger_row(conn, row)] += 1
     return counts
+
+
+def upsert_ledger_row(conn, row: dict) -> str:
+    """Insert or refresh one ledger row and its rule classification: 'inserted', 'updated', or 'unchanged'.
+
+    A manual classification is kept."""
+    existing = conn.execute("SELECT * FROM transactions WHERE id = ?", (row["id"],)).fetchone()
+    ts = now_iso()
+    outcome = "unchanged"
+    if existing is None:
+        conn.execute(
+            """
+            INSERT INTO transactions (
+              id, account_id, date, amount_cents, direction, currency, name, merchant_name, description,
+              pending, provider_category, raw_json, status, superseded_by, first_seen_at, last_seen_at,
+              updated_at, source
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, 'active', NULL, ?, ?, ?, ?)
+            """,
+            (
+                row["id"], row["account_id"], row["date"], row["amount_cents"], row["direction"], row["currency"],
+                row["name"], row["merchant_name"], row["description"], row["provider_category"], row["raw_json"],
+                ts, ts, ts, SOURCE,
+            ),
+        )
+        outcome = "inserted"
+    elif any(existing[field] != row[field] for field in _LEDGER_FIELDS) or existing["status"] != "active":
+        conn.execute(
+            f"""
+            UPDATE transactions SET {", ".join(f"{field} = ?" for field in _LEDGER_FIELDS)},
+              raw_json = ?, status = 'active', superseded_by = NULL, last_seen_at = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (*(row[field] for field in _LEDGER_FIELDS), row["raw_json"], ts, ts, row["id"]),
+        )
+        outcome = "updated"
+    else:
+        conn.execute("UPDATE transactions SET raw_json = ?, last_seen_at = ? WHERE id = ?", (row["raw_json"], ts, row["id"]))
+    tag, category, confidence, note = row["assign"]
+    write_classification(
+        conn, row["id"], tag, category, "rule", confidence, note, None,
+        overwrite_manual=False, actor="stripe", audit_write=False,
+    )
+    return outcome
+
+
+def delete_ledger_row(conn, row_id: str, *, note: str) -> None:
+    """Remove a ledger row the Stripe import made and no longer wants (never a manual one)."""
+    for table in ("classifications", "p_classifications", "p_splits", "p_txn_tags"):
+        if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)).fetchone():
+            conn.execute(f"DELETE FROM {table} WHERE txn_id = ?", (row_id,))
+    conn.execute("UPDATE transactions SET superseded_by = NULL WHERE superseded_by = ?", (row_id,))
+    conn.execute("DELETE FROM transactions WHERE id = ?", (row_id,))
+    audit(conn, "stripe_row_removed", txn_id=row_id, actor="stripe", note=note)
 
 
 # --- import ------------------------------------------------------------------------------------
@@ -658,6 +688,7 @@ def _account_stats() -> dict:
         "unchanged": 0,
         "ledger_inserted": 0,
         "ledger_updated": 0,
+        "ledger_deleted": 0,
         "skipped_currency": 0,
         "skipped_rows": 0,
         "payouts_new": 0,
@@ -665,6 +696,7 @@ def _account_stats() -> dict:
         "payouts_unchanged": 0,
         "anchor": None,
         "ledger_account_created": False,
+        "capital": None,
     }
 
 
@@ -743,6 +775,8 @@ def import_files(conn, paths: list[Path], *, account: str | None = None, dry_run
                     if btx["booking"] == "skipped_currency":
                         stats["skipped_currency"] += 1
                         continue
+                    if btx["booking"] == "capital":
+                        continue  # booked below from the whole Capital history (stripe_capital)
                     posted = post_ledger(conn, acct, cfg, btx)
                     stats["ledger_inserted"] += posted["inserted"]
                     stats["ledger_updated"] += posted["updated"]
@@ -762,6 +796,7 @@ def import_files(conn, paths: list[Path], *, account: str | None = None, dry_run
     for name, outcomes in payout_outcomes.items():
         for outcome in outcomes.values():
             results[name]["payouts_" + outcome] += 1
+    _post_capital(conn, cfg, results)
     match = match_payouts(conn, today=today)
     if not dry_run:
         for name, stats in results.items():
@@ -773,6 +808,27 @@ def import_files(conn, paths: list[Path], *, account: str | None = None, dry_run
     if dry_run:
         conn.rollback()
     return out
+
+
+def _post_capital(conn, cfg: StripeConfig, results: dict) -> None:
+    """Re-split Stripe Capital for every account on every import, so a change to the
+    [[stripe.capital]] terms re-books all rows (stripe_capital)."""
+    from hpbooks.stripe_capital import post
+
+    for acct in cfg.accounts:
+        if not account_ok(acct, cfg):
+            continue
+        cap = post(conn, cfg, acct)
+        if cap is None:
+            continue
+        changed = cap["inserted"] or cap["updated"] or cap["deleted"] or cap["conflicts"] or cap["loan_account_created"]
+        if acct.name not in results and not changed:
+            continue
+        stats = results.setdefault(acct.name, _account_stats())
+        stats["ledger_inserted"] += cap["inserted"]
+        stats["ledger_updated"] += cap["updated"]
+        stats["ledger_deleted"] += cap["deleted"]
+        stats["capital"] = cap
 
 
 def import_paths(conn, items: list[str], **kwargs) -> dict:
@@ -854,11 +910,13 @@ def _bank_candidates(conn, cfg: StripeConfig) -> list[dict]:
 def _payout_rows(conn, acct: StripeAccount) -> list[dict]:
     rows = conn.execute(
         """
-        SELECT p.*, b.id AS btx_id, b.amount_cents AS btx_amount, b.created AS btx_created
+        SELECT p.*, coalesce(b1.id, b2.id) AS btx_id, coalesce(b1.amount_cents, b2.amount_cents) AS btx_amount,
+               coalesce(b1.created, b2.created) AS btx_created
         FROM stripe_payouts p
-        LEFT JOIN stripe_balance_transactions b
-          ON b.account = p.account AND b.booking = 'payout'
-         AND (b.id = p.balance_transaction OR b.source_id = p.id)
+        LEFT JOIN stripe_balance_transactions b1
+          ON b1.account = p.account AND b1.id = p.balance_transaction AND b1.booking = 'payout'
+        LEFT JOIN stripe_balance_transactions b2 INDEXED BY idx_stripe_btx_source
+          ON b2.account = p.account AND b2.source_id = p.id AND b2.booking = 'payout'
         WHERE p.account = ?
         ORDER BY ifnull(p.arrival_date, p.created), p.id
         """,
@@ -885,6 +943,8 @@ def _returned_payouts(conn, acct: StripeAccount) -> set[str]:
 
 
 def _fits(acct: StripeAccount, payout: dict, bank: dict, cents: int, base: str, window: int) -> bool:
+    """The deposit is the payout's amount, in its payout account, from 1 day before to `window`
+    days after the payout's own arrival date (never relative to today)."""
     if int(bank["amount_cents"]) != cents:
         return False
     if acct.payout_account and acct.payout_account not in (bank["account_id"], bank.get("last4")):
@@ -892,6 +952,29 @@ def _fits(acct: StripeAccount, payout: dict, bank: dict, cents: int, base: str, 
     start = (date.fromisoformat(base) - timedelta(days=1)).isoformat()
     end = (date.fromisoformat(base) + timedelta(days=window)).isoformat()
     return start <= bank["date"] <= end
+
+
+def _history_start(conn, cfg: StripeConfig) -> dict[str | None, str | None]:
+    """The earliest imported row of the bank accounts a payout can land in: per payout_account
+    (id or last 4), and under None for any business cash account."""
+    from hpbooks.scope import has_scope
+
+    scope_sql = "AND a.scope = 'business'" if has_scope(conn) else ""
+    firsts = conn.execute(
+        f"""
+        SELECT a.id, a.last4, (SELECT min(t.date) FROM transactions t WHERE t.account_id = a.id AND t.status = 'active') AS first
+        FROM accounts a
+        WHERE a.type = 'cash' AND a.id NOT LIKE 'stripe-%' {scope_sql}
+        """
+    ).fetchall()
+    out: dict[str | None, str | None] = {}
+    every = [row["first"] for row in firsts if row["first"]]
+    out[None] = min(every) if every else None
+    for acct in cfg.accounts:
+        if acct.payout_account:
+            mine = [row["first"] for row in firsts if row["first"] and acct.payout_account in (row["id"], row["last4"])]
+            out[acct.payout_account] = min(mine) if mine else None
+    return out
 
 
 def match_payouts(conn, *, today: date | None = None) -> dict:
@@ -909,6 +992,12 @@ def match_payouts(conn, *, today: date | None = None) -> dict:
         return counts
     banks = _bank_candidates(conn, cfg)
     bank_by_id = {row["id"]: row for row in banks}
+    # Deposits by amount: a payout only ever looks at deposits of its own amount, so a
+    # long backfill (hundreds of payouts, a year of bank rows) is not payouts x deposits.
+    by_amount: dict[int, list[dict]] = defaultdict(list)
+    for row in banks:
+        by_amount[int(row["amount_cents"])].append(row)
+    history = _history_start(conn, cfg)
     plans: list[tuple[StripeAccount, dict, int, str]] = []
     decided: dict[tuple[str, str], tuple[str, str | None, str]] = {}
     for acct in cfg.accounts:
@@ -945,7 +1034,7 @@ def match_payouts(conn, *, today: date | None = None) -> dict:
             key = (acct.name, payout["id"])
             if key in claimed.values():
                 continue
-            found = [bank for bank in banks if bank["id"] not in claimed and _fits(acct, payout, bank, cents, base, cfg.payout_window_days)]
+            found = [bank for bank in by_amount.get(cents, ()) if bank["id"] not in claimed and _fits(acct, payout, bank, cents, base, cfg.payout_window_days)]
             candidates[key] = found
             if len(found) == 1:
                 claimed[found[0]["id"]] = key
@@ -967,8 +1056,12 @@ def match_payouts(conn, *, today: date | None = None) -> dict:
             decided[key] = ("ambiguous", None, f"{len(found)} bank deposits fit: " + ", ".join(row["id"] for row in found[:5]))
             continue
         latest = (date.fromisoformat(base) + timedelta(days=cfg.payout_window_days)).isoformat()
+        first = history.get(acct.payout_account)
         if payout["status"] in ("pending", "in_transit") or latest >= today.isoformat():
             decided[key] = ("in_transit", None, f"expected in the bank by {latest}")
+        elif first is not None and base < first:
+            where = f"payout account {acct.payout_account}" if acct.payout_account else "the business bank accounts"
+            decided[key] = ("no_bank_history", None, f"arrived {base}, before the imported bank history of {where} (starts {first})")
         else:
             decided[key] = ("unmatched", None, f"no bank deposit of {cents / 100:.2f} matching the payout text from {base} to {latest}")
 
@@ -977,13 +1070,14 @@ def match_payouts(conn, *, today: date | None = None) -> dict:
         counts[status] += 1
         acct = accounts[name]
         previous = conn.execute(
-            "SELECT matched_txn_id, balance_transaction FROM stripe_payouts WHERE account = ? AND id = ?", (name, payout_id)
+            "SELECT matched_txn_id, match_status, match_note FROM stripe_payouts WHERE account = ? AND id = ?", (name, payout_id)
         ).fetchone()
         old_bank = previous["matched_txn_id"] if previous else None
-        conn.execute(
-            "UPDATE stripe_payouts SET match_status = ?, matched_txn_id = ?, match_note = ? WHERE account = ? AND id = ?",
-            (status, bank_id, note, name, payout_id),
-        )
+        if previous is None or (previous["match_status"], old_bank, previous["match_note"]) != (status, bank_id, note):
+            conn.execute(
+                "UPDATE stripe_payouts SET match_status = ?, matched_txn_id = ?, match_note = ? WHERE account = ? AND id = ?",
+                (status, bank_id, note, name, payout_id),
+            )
         if old_bank and old_bank != bank_id:
             _release_bank(conn, old_bank)
         if status == "matched" and bank_id:

@@ -301,6 +301,10 @@ def build_parser() -> argparse.ArgumentParser:
     stripe_rec.add_argument("--rows", action="store_true", help="show the match note on every payout")
     stripe_rec.add_argument("--format", default="table", choices=("table", "csv"))
     stripe_rec.set_defaults(func=cmd_stripe_reconcile)
+    stripe_cap = stripe_sub.add_parser("capital", help="Stripe Capital per financing: principal, fee, repaid, outstanding")
+    stripe_cap.add_argument("--account", help=stripe_names)
+    stripe_cap.add_argument("--json", action="store_true")
+    stripe_cap.set_defaults(func=cmd_stripe_capital)
     stripe_sync = stripe_sub.add_parser("sync", help="optional: pull from the Stripe API with a restricted read-only key, then import")
     stripe_sync.add_argument("--from", dest="date_from", help="YYYY-MM-DD (default 10 days ago)")
     stripe_sync.add_argument("--to", dest="date_to", help="YYYY-MM-DD (default today)")
@@ -1143,12 +1147,21 @@ def _print_stripe_import(result: dict) -> None:
         print(
             f"{prefix}stripe {name}: new={s['new']} updated={s['updated']} unchanged={s['unchanged']} "
             f"ledger rows posted={s['ledger_inserted']} refreshed={s['ledger_updated']} "
-            f"payouts new={s['payouts_new']} updated={s['payouts_updated']}"
+            + (f"removed={s['ledger_deleted']} " if s.get("ledger_deleted") else "")
+            + f"payouts new={s['payouts_new']} updated={s['payouts_updated']}"
             + (f" skipped: currency={s['skipped_currency']}" if s["skipped_currency"] else "")
             + (f" skipped: unreadable={s['skipped_rows']}" if s["skipped_rows"] else "")
         )
         if s["ledger_account_created"]:
             print(f"  registered the business cash account stripe-{name}")
+        cap = s.get("capital")
+        if cap:
+            if cap["loan_account_created"]:
+                print(f"  registered the Stripe Capital loan account stripe-{name}-capital")
+            for item in cap["conflicts"]:
+                print(f"stripe {name}: Capital row left alone: {item['reason']}", file=sys.stderr)
+            for text in cap["warnings"]:
+                print(f"stripe {name}: warning: {text}", file=sys.stderr)
         anchor = s.get("anchor")
         if anchor and anchor["recorded"]:
             print(f"  Stripe balance {format_money(anchor['balance_cents'])} recorded as of {anchor['as_of']}")
@@ -1180,6 +1193,21 @@ def cmd_stripe_status(args) -> int:
     if not data["ready"]:
         print("Stripe has not been imported yet. Run: hpbooks stripe import sync/inbox/YYYY-MM-DD/stripe/")
     print(sr.status_text(data))
+    return 0
+
+
+def cmd_stripe_capital(args) -> int:
+    import json
+
+    from hpbooks import stripe_reports as sr
+    from hpbooks.stripe_capital import report_text
+
+    with connect(readonly=True) as conn:
+        data = sr.capital(conn, account=args.account)
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return 0
+    print(report_text(data))
     return 0
 
 

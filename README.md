@@ -152,7 +152,7 @@ Set `whmcs = true` under `[features]` and fill in `[whmcs]` and one `[[whmcs.bra
 
 ## Stripe (optional)
 
-Set `stripe = true` under `[features]` and add one `[[stripe.accounts]]` per Stripe account (its name and business, and optionally the `acct_` id) in `config/local.toml`. Grok Bot saves the Stripe connector's balance transactions and payouts to `sync/inbox/YYYY-MM-DD/stripe/`, and `bin/hpbooks import sync/inbox/YYYY-MM-DD/` books them: gross revenue and fees per business, refunds and disputes against revenue, payouts as transfers paired with the bank deposits. Check payouts with `bin/hpbooks stripe reconcile`. Booking rules, the connector steps, and the optional direct-API mode: [docs/stripe.md](docs/stripe.md).
+Set `stripe = true` under `[features]` and add one `[[stripe.accounts]]` per Stripe account (its name and business, and optionally the `acct_` id) in `config/local.toml`. Grok Bot saves the Stripe connector's balance transactions and payouts to `sync/inbox/YYYY-MM-DD/stripe/`, and `bin/hpbooks import sync/inbox/YYYY-MM-DD/` books them: gross revenue and fees per business, refunds and disputes against revenue, payouts as transfers paired with the bank deposits, and Stripe Capital as a loan (add its principal and fee as `[[stripe.capital]]` so each repayment splits into principal and interest). Check payouts with `bin/hpbooks stripe reconcile`. Booking rules, the connector steps, the payout backfill, and the optional direct-API mode: [docs/stripe.md](docs/stripe.md).
 
 ## Updates
 

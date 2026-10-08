@@ -712,6 +712,43 @@ CREATE INDEX IF NOT EXISTS idx_stripe_payouts_arrival ON stripe_payouts(account,
 CREATE INDEX IF NOT EXISTS idx_stripe_sync_log_account ON stripe_sync_log(account, id);
 """
 
+# Payout match status no_bank_history (the payout arrived before the earliest
+# imported row of its bank account(s), as after a long Stripe backfill). SQLite
+# cannot change a CHECK, so stripe_payouts is rebuilt with its rows. Plus
+# indexes for Capital rows and the matcher.
+SCHEMA_V13 = """
+CREATE TABLE stripe_payouts_v13 (
+  account TEXT NOT NULL,
+  id TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL,
+  currency TEXT NOT NULL,
+  arrival_date TEXT,
+  created TEXT,
+  status TEXT,
+  balance_transaction TEXT,
+  failure_code TEXT,
+  failure_message TEXT,
+  method TEXT,
+  matched_txn_id TEXT,
+  match_status TEXT NOT NULL DEFAULT 'unmatched'
+    CHECK (match_status IN ('matched', 'in_transit', 'unmatched', 'ambiguous', 'conflict', 'failed', 'skipped', 'no_bank_history')),
+  match_note TEXT,
+  imported_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (account, id)
+);
+INSERT INTO stripe_payouts_v13 (account, id, amount_cents, currency, arrival_date, created, status, balance_transaction,
+  failure_code, failure_message, method, matched_txn_id, match_status, match_note, imported_at, updated_at)
+SELECT account, id, amount_cents, currency, arrival_date, created, status, balance_transaction,
+  failure_code, failure_message, method, matched_txn_id, match_status, match_note, imported_at, updated_at
+FROM stripe_payouts;
+DROP TABLE stripe_payouts;
+ALTER TABLE stripe_payouts_v13 RENAME TO stripe_payouts;
+CREATE INDEX IF NOT EXISTS idx_stripe_payouts_arrival ON stripe_payouts(account, arrival_date);
+CREATE INDEX IF NOT EXISTS idx_stripe_payouts_matched ON stripe_payouts(matched_txn_id);
+CREATE INDEX IF NOT EXISTS idx_stripe_btx_booking ON stripe_balance_transactions(account, booking, created_ts);
+"""
+
 MIGRATIONS = (
     (1, SCHEMA_V1),
     (2, SCHEMA_V2),
@@ -725,6 +762,7 @@ MIGRATIONS = (
     (10, SCHEMA_V10),
     (11, SCHEMA_V11),
     (12, SCHEMA_V12),
+    (13, SCHEMA_V13),
 )
 
 # Keys the web UI is allowed to write. Values are plain text, never secrets.

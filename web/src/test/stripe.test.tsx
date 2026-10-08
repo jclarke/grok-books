@@ -6,7 +6,7 @@ import { normalizeSiteConfig } from "../lib/siteConfig";
 import * as fx from "./fixtures";
 import { mockApi } from "./mockApi";
 import { renderApp } from "./render";
-import { stripeConfig, stripeNotReady, stripePayouts, stripeSummary } from "./stripeFixtures";
+import { stripeCapitalNoTerms, stripeConfig, stripeNotReady, stripePayouts, stripeSummary } from "./stripeFixtures";
 
 const OFF = { whmcs: true, margins: true };
 const ON = { whmcs: true, margins: true, stripe: true };
@@ -90,8 +90,17 @@ describe("Stripe turned on", () => {
     expect(within(kpis).getByText("4.00% of gross")).toBeInTheDocument();
     expect(within(kpis).getByText("$238.00")).toBeInTheDocument();
 
-    // Capital repayments are nonzero in the fixture.
+    // Stripe Capital: lifetime figures per financing, no warning when the terms are set.
     expect(screen.getByRole("heading", { name: "Stripe Capital" })).toBeInTheDocument();
+    const capital = screen.getByRole("table", { name: "Stripe Capital by financing" });
+    const loanRow = within(capital).getByText("Capital loan 2026").closest("tr") as HTMLElement;
+    expect(within(loanRow).getByText("$20,000.00")).toBeInTheDocument();
+    expect(within(loanRow).getByText("$2,000.00")).toBeInTheDocument();
+    expect(within(loanRow).getByText("$9,090.91")).toBeInTheDocument();
+    expect(within(loanRow).getByText("$909.09")).toBeInTheDocument();
+    expect(within(loanRow).getByText("$10,909.09")).toBeInTheDocument();
+    expect(within(loanRow).getByText("45.5%")).toBeInTheDocument();
+    expect(screen.queryByText(/Capital fee not split/)).toBeNull();
     // One account: no per-account table.
     expect(screen.queryByRole("table", { name: "Stripe figures by account" })).toBeNull();
 
@@ -104,6 +113,7 @@ describe("Stripe turned on", () => {
     expect(within(payouts).getByText("Matched")).toHaveClass("badge--pos");
     expect(within(payouts).getByText("In transit")).toHaveClass("badge--info");
     expect(within(payouts).getByText("Unmatched")).toHaveClass("badge--warn");
+    expect(within(payouts).getByText("No bank history")).toHaveClass("badge--neutral");
     expect(within(payouts).getByText("no bank deposit of $50.00 within 3 days")).toBeInTheDocument();
     const matchedRow = within(payouts).getByText("po_TEST0001").closest("tr") as HTMLElement;
     expect(within(matchedRow).getByText(/Bank 0101/)).toBeInTheDocument();
@@ -125,6 +135,17 @@ describe("Stripe turned on", () => {
     expect(summary?.query.get("end")).toBe("2026-10-08");
     expect(summary?.query.get("business")).toBe("general");
     expect(calls.some((call) => call.path === "/api/stripe/payouts")).toBe(true);
+  });
+
+  it("warns when Capital repayments have no terms to split the fee", async () => {
+    mockApi({ "GET /api/config": () => stripeConfig, "GET /api/stripe/summary": () => ({ ...stripeSummary, capital: stripeCapitalNoTerms }) });
+    renderApp("/stripe?start=2026-01-01&end=2026-10-08&business=general");
+    const card = await screen.findByRole("region", { name: "Stripe Capital" });
+    const note = within(card).getAllByRole("note")[0];
+    expect(note).toHaveTextContent("Capital fee not split: add [[stripe.capital]] terms. $3,000.00 of repayments are booked whole as transfers");
+    expect(within(card).getAllByRole("note")).toHaveLength(1);
+    const row = within(within(card).getByRole("table", { name: "Stripe Capital by financing" })).getByText("No terms").closest("tr") as HTMLElement;
+    expect(within(row).getAllByText("—").length).toBeGreaterThan(3);
   });
 
   it("shows a per-account table when there is more than one account", async () => {

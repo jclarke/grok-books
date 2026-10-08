@@ -144,6 +144,14 @@ def _payout_counts(conn, names: list[str]) -> dict:
     return counts
 
 
+def capital(conn, *, business: str = "all", account: str | None = None) -> dict:
+    """Stripe Capital per financing (lifetime, not the date range): principal, fee, repaid
+    principal, fee booked, principal outstanding, and the loan account balance."""
+    from hpbooks.stripe_capital import report
+
+    return report(conn, settings(), _accounts(business, account))
+
+
 def summary(conn, start: str | None = None, end: str | None = None, *, business: str = "all", account: str | None = None, today: date | None = None) -> dict:
     """Gross, refunds, disputes, fees, net, and Capital per account and by month."""
     start, end = _range(start, end, today)
@@ -184,6 +192,7 @@ def summary(conn, start: str | None = None, end: str | None = None, *, business:
         "payouts": payouts,
         "open_payouts": payouts["unmatched"] + payouts["ambiguous"] + payouts["conflict"],
         "bank_only": len(bank_only(conn, start, end)) if accounts else 0,
+        "capital": capital(conn, business=business, account=account),
     }
 
 
@@ -325,7 +334,7 @@ def status(conn, *, account: str | None = None, today: date | None = None) -> di
             {key: row[key] for key in ("ts", "account", "kind", "status")}
             for row in conn.execute("SELECT ts, account, kind, status FROM stripe_sync_log ORDER BY id DESC LIMIT 10")
         ]
-    return {"ready": ready(conn), "today": today.isoformat(), "accounts": out, "log": log}
+    return {"ready": ready(conn), "today": today.isoformat(), "accounts": out, "capital": capital(conn, account=account), "log": log}
 
 
 # --- text and CSV ------------------------------------------------------------------------------
@@ -441,4 +450,10 @@ def status_text(data: dict) -> str:
         out.append(f"  payouts: {pays}")
         out.append(f"  needs review: {a['needs_review']}; skipped (currency): {a['skipped_currency']}")
         out.append("")
+    cap = data.get("capital")
+    if cap and cap["financings"]:
+        from hpbooks.stripe_capital import report_text
+
+        out.append("Stripe Capital (lifetime)")
+        out.extend("  " + line for line in report_text(cap).splitlines())
     return "\n".join(out).rstrip()

@@ -16,15 +16,84 @@ Each Stripe account is a business **cash account** in the ledger (`stripe-<name>
 | `payout` / `payout` | `transfer` out of the Stripe account | none |
 | `payout_failure`, `payout_cancel` / `payout_reversal` | `transfer` back in | none |
 | `payout_minimum_balance_hold` / `_release`, `reserve_hold` / `_release`, `reserved_funds`, `risk_reserved_funds`, `connect_reserved_funds` | `transfer` rows in the Stripe account (they cancel out) | none |
-| `financing…` (type or category), money out, e.g. `financing_paydown` | `transfer`, note "Stripe Capital repayment" | none (loan principal) |
-| `financing…` (type or category), money in | `transfer` in, note "Stripe Capital financing" | none |
+| `financing_payout` (Stripe Capital proceeds) | `transfer` in, note "Stripe Capital financing …", paired with a row on the loan account `stripe-<name>-capital` that raises the amount owed | none |
+| `financing_paydown` (repayment), with `[[stripe.capital]]` terms | principal part: `transfer` out, paired with a loan account row that lowers the amount owed; fee part (`…:capfee`): `capital_fee_category` | the fee only (Interest) |
+| `financing_paydown`, no terms | the whole repayment as a `transfer`, note "fee not split, add [[stripe.capital]] terms"; a loan account row only when the proceeds are in the history | none (warning) |
+| `financing_payout_reversal`, `financing_paydown_reversal` | undo the original row's split (see [Stripe Capital](#stripe-capital)) | reverses the fee |
+| other `financing…` types or categories | `transfer`, not split | none |
 | anything else | `needs_review`, never guessed | review inbox |
 
 - Revenue goes to the business of the `[[stripe.accounts]]` entry, in its `revenue_category` (default: that business's `revenue_category`, else the first revenue category).
 - The ledger uses Stripe's settled `amount` in the balance currency. Balance transactions are final even while `status` is `pending` (that is only when funds become available); the status is stored and updated on re-import.
-- Row ids are deterministic: `stripe:<name>:<txn_id>` for the amount and `stripe:<name>:<txn_id>:fee` for the fee, so a re-import updates in place and never duplicates. Dates are the `created` time in `[stripe] timezone` (America/New_York by default).
+- Row ids are deterministic: `stripe:<name>:<txn_id>` for the amount and `stripe:<name>:<txn_id>:fee` for the fee (Capital adds `:capfee` and `:loan`), so a re-import updates in place and never duplicates. Dates are the `created` time in `[stripe] timezone` (America/New_York by default).
 - Text rules never re-tag Stripe rows (`reclassify` leaves them alone). A manual classification is never overwritten by a re-import.
-- Stripe Capital totals are listed separately in `stripe status` and on the Stripe page.
+- Stripe Capital is a loan: see [Stripe Capital](#stripe-capital).
+
+## Stripe Capital
+
+[Stripe Capital](https://stripe.com/capital) is a loan: Stripe pays the principal into the Stripe balance and withholds a fixed percentage of sales until principal plus one flat fee (the "premium") is repaid. There is no interest compounding and no prepayment penalty; the fee is paid pro rata with each repayment.
+
+### What Stripe exposes, and why the split uses your terms
+
+The balance transactions carry four types: `financing_payout` (proceeds, positive), `financing_paydown` (a repayment withheld from sales, or a manual or bank payment, negative), and `financing_payout_reversal` / `financing_paydown_reversal` (undo the original). A withheld repayment's description reads like "Withheld funds from ch_… to pay down flex loan flxln_…"; hpbooks takes the financing id from the token after "loan" (or any `…ln_…` token). Manual repayments and the proceeds may not name it.
+
+No balance transaction says how much of a repayment is fee and how much is principal, and the Capital API operations that would are not available through the Stripe connector. So the split is computed from the terms you enter, which reproduces Stripe's pro rata rule exactly:
+
+```
+fee share            = fee / (principal + fee)
+fee booked after it  = min(fee, round(cumulative repaid x fee share))      rounded half up, to the cent
+this repayment's fee = fee booked after it - fee booked before it
+principal part       = repayment - fee part
+```
+
+Rows are taken per financing in (created, id) order. Because the rounding is cumulative, the fee rows add up to the fee and the principal rows to the principal exactly once the loan is repaid. When principal is fully repaid, any later repayment is fee until the fee is booked; anything beyond principal plus fee is an overpayment, booked as a credit on the loan account and reported.
+
+### Where to find the terms
+
+In the Stripe Dashboard, the **Capital** section lists each financing with the amount you received (the principal), the fixed fee, the withholding rate, and what remains; the loan agreement (the offer you accepted) states the same principal and fee. Use those two numbers; `fee_rate` is only a shortcut when the agreement states the fee as a percentage of the principal. The financing id (`flxln_…`) appears in the repayment descriptions, and `bin/hpbooks stripe capital` lists the ids it has seen.
+
+### Config
+
+```toml
+[stripe]
+capital_fee_category = "Interest"   # default: "Interest" if that category exists, else fee_category; must be an expense category
+
+[[stripe.capital]]
+account = "main"            # a [[stripe.accounts]] name
+financing = "flxln_..."     # optional: the id seen in repayment descriptions; omitted = the default for that
+                            # account's Capital rows that match no other entry
+principal = 20000.00        # amount received
+fee = 2000.00               # the flat fee from the offer; or fee_rate = 0.10 (fee = principal x rate); exactly one
+# label = "Capital loan 2026"
+# opening_principal = 12000.00  # principal still owed on start_date, when the proceeds are before your imported history
+# start_date = "2026-01-01"     # required with opening_principal
+```
+
+A row that names no financing goes to the account's default entry; without one, to the account's only financing if there is exactly one. The Capital fee is a Schedule C line 16b expense (Interest, other) for the account's business; principal never appears in the P&L.
+
+### The loan account
+
+For each Stripe account with Capital terms (or with proceeds to post), the import registers `stripe-<name>-capital`, "Stripe Capital (<label>)": a business **liability** of class **loan**, institution Stripe, in net worth, Finance sync off. Like a card, its rows are signed from your side: proceeds are negative (the amount owed goes up), principal repayments positive (it goes down), and its balance is the principal owed. Each proceeds row and each principal row is a transfer pair: `stripe:<name>:<txn>` in the Stripe cash account and `stripe:<name>:<txn>:loan` on the loan account, each note naming the other.
+
+With `opening_principal`, the loan account gets one opening row `stripe:<name>:capital:<financing or default>:opening` on `start_date`, and the figures assume what was repaid before it carried the fee pro rata. It is ignored (with a warning) once the `financing_payout` itself is imported.
+
+### Reversals
+
+A `financing_paydown_reversal` undoes the repayment it names (a `txn_…` id in its description, else the latest earlier repayment with the same `source`): the fee and principal come back in the same proportion as the original. When the original is unknown, it is reversed at the configured fee share. A `financing_payout_reversal` gives the proceeds back (the amount owed goes down).
+
+### Missing terms, config changes, manual rows
+
+- Without a matching `[[stripe.capital]]` entry, repayments stay whole transfers as before; a loan account row is posted only when the proceeds are in the history (and only up to them). `stripe status`, `stripe capital`, and the Stripe page warn "Capital fee not split: add [[stripe.capital]] terms" with the unsplit total.
+- Every Stripe import recomputes the split for every account, so adding the terms later (or correcting the fee) re-books all Capital rows in place; fee rows that are no longer wanted are removed. Running it again changes nothing.
+- A manual classification is never changed. If the new split would change the amount of a manually classified row, or remove it, that repayment's rows are left as they are and reported as a conflict (on import and in `stripe capital`).
+
+### Proceeds paid to a bank account
+
+If the financing was paid to your bank account instead of the Stripe balance, there is no `financing_payout`: set `opening_principal` (the principal) and `start_date` (the funding date), and classify the Finance bank deposit by hand as a `transfer` (it is the other side of the loan account's opening row), so it is not counted as revenue.
+
+### Reports
+
+`bin/hpbooks stripe capital [--account NAME] [--json]` and the Capital section of `stripe status` list per financing: principal, fee, repaid principal, fee booked, principal outstanding (equal to the loan account balance), and percent repaid, plus the loan account balance, conflicts, and warnings. The same figures are in `GET /api/stripe/summary` (`capital`), `GET /api/stripe/capital`, and the Stripe page's Capital card. They are lifetime figures; the date range only changes the "repaid in this range" line.
 
 ## Payout reconciliation (the double-count guard)
 
@@ -38,6 +107,9 @@ The bank feed (Finance) also sees every payout as a deposit, and the starter rul
 - **unmatched**: the window closed with no deposit, or the payout's balance transaction has not been imported and Stripe does not say it is pending / in transit.
 - **failed**: Stripe reports the payout failed or canceled, or a `payout_failure` / `payout_cancel` returned it.
 - **skipped**: the payout or its Stripe account is not in the books currency; it is not matched.
+- **no_bank_history**: no deposit, and the payout arrived before the earliest imported row of the bank account(s) it can land in (its `payout_account`, else every business cash account). Usual after a long [backfill](#backfill-payouts): import older bank history and it matches. It is not counted as open.
+
+Matching uses each payout's own arrival date, never today's, so a payout from last March is matched against March bank rows; "today" only decides whether a payout without a deposit is still **in_transit**. Deposits are looked up by amount first, so a year of daily payouts reconciles in about a second.
 
 The matcher runs after every Stripe import, after every `bin/hpbooks import` (a deposit can arrive after the payout file, or the reverse), and after `reclassify`. A deposit that loses its pair (for example, a pending bank row replaced by its posted row) goes back to the rules and the posted row is paired instead. Stripe-looking deposits that pair with no payout are listed as **bank only** by `stripe reconcile` and on the Stripe page: those are still booked by your rules, so check them.
 
@@ -98,9 +170,21 @@ sync/inbox/YYYY-MM-DD/stripe/
 
 `main_balance.json` records a balance anchor for the Stripe ledger account (available + pending in the account currency, as of the folder date; it is stored as a `statement` anchor with the note "Stripe balance (available + pending)"; outside a dated folder, such as `backfill-stripe/`, the date is today). The folder date is the day of the pull, so activity later that day can show as a small difference until the next pull.
 
-### First load / backfill
+### Backfill payouts
 
-Pull month by month from the date the books start (for example `created.gte` = the 1st of each month and `created.lt` = the 1st of the next), paging each window with `starting_after`, into `sync/inbox/backfill-stripe/stripe/<name>_<n>.json` and `<name>_payouts_<n>.json` with a running page number. Then `bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/`. The import is idempotent, so overlapping windows are fine.
+The first load pulls everything from the date the books start, so every payout since then is reconciled against the bank history:
+
+1. For each configured account, month by month from the books' start date: `GetPayouts` and `GetBalanceTransactions` for the same window, `{"limit": 100, "created": {"gte": <unix start of the 1st of the month>, "lt": <unix start of the 1st of the next month>}}` in the books time zone, paging each window with `"starting_after": "<id of the last item in data>"` while `has_more` is true.
+2. Save them with one running page number per account: `sync/inbox/backfill-stripe/stripe/<name>_<n>.json` (balance transactions) and `<name>_payouts_<n>.json` (payouts).
+3. `bin/hpbooks stripe import sync/inbox/backfill-stripe/stripe/`
+4. `bin/hpbooks stripe reconcile --from <books start> --rows`
+
+The import is idempotent, so overlapping windows, re-runs, and months imported out of order (older months in a second run) are fine; the matcher reruns over every payout each time. What to expect:
+
+- **matched** for payouts whose deposit is in the imported bank history.
+- **no_bank_history** for payouts that arrived before the first imported row of their bank account(s). Import that older Finance history (see [sync/README.md](../sync/README.md#history-backfill-for-a-newly-discovered-personal-account) for date windows) and they match.
+- **in_transit** only for the last few days; **unmatched** / **ambiguous** / **conflict** need a look as described above.
+- **Bank only**: before Stripe was on, your rules booked Stripe deposits as revenue. They pair automatically, and become transfers, once their payout is imported. Anything still bank only after the backfill is a deposit with no payout in the imported Stripe history (a window that was not pulled, another Stripe account, or something else); check it and classify it by hand.
 
 ## CLI
 
@@ -108,20 +192,22 @@ Pull month by month from the date the books start (for example `created.gte` = t
 bin/hpbooks stripe import <files|dirs|globs> [--account NAME] [--dry-run]
 bin/hpbooks stripe status [--account NAME] [--json]
 bin/hpbooks stripe reconcile [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--account NAME] [--rows] [--format table|csv]
+bin/hpbooks stripe capital [--account NAME] [--json]
 bin/hpbooks stripe sync [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--account NAME] [--inbox DIR]   # optional direct-API mode
 ```
 
 - `import` takes the account from the file prefix (`<name>_N.json`, `<name>_payouts_N.json`); `--account` overrides it. Files for an unknown name, for another `stripe_account`, or in test mode are skipped with a message. Output per account: new / updated / unchanged balance transactions, ledger rows posted / refreshed, payouts new / updated (a payout is new when it did not exist before this run), rows skipped for currency or unreadable, then payouts by match status. `--dry-run` writes nothing.
 - `bin/hpbooks import sync/inbox/YYYY-MM-DD/` picks up the `stripe/` subfolder when the feature is on and ignores it when off. The Finance importer never reads files in a `stripe/` folder.
-- `status`: per account the business, last imported transaction date, counts by booking, the ledger account's activity and the latest Stripe balance anchor, gross / refunds / disputes / fees / net for this month and year to date, Stripe Capital repayments, payouts by status, rows needing review, and rows skipped for currency.
+- `status`: per account the business, last imported transaction date, counts by booking, the ledger account's activity and the latest Stripe balance anchor, gross / refunds / disputes / fees / net for this month and year to date, Stripe Capital repayments, payouts by status, rows needing review, and rows skipped for currency; then the Stripe Capital section (per financing, lifetime) with its warnings.
 - `reconcile`: each payout (by arrival date) with its matched bank deposit (date, account, last 4) or status and note, the bank-only deposits, and totals (on stderr; `--format csv` prints the payouts and bank-only tables instead). Default range: this year to date; with only one of `--from` / `--to`, the other defaults to Jan 1 or today.
+- `capital`: see [Stripe Capital](#reports).
 - `sync`: see [Direct-API mode](#direct-api-mode-optional). `--inbox` saves under another inbox directory (default `sync/inbox`).
 
 ## Web UI
 
-With the feature on, the business sidebar has a **Stripe** section (also in the command palette) with one page, `/stripe`: KPI cards (gross, refunds + disputes, fees and the effective fee rate, net revenue), Stripe Capital when there is any, a per-account table when there is more than one account, a monthly chart and table, the payouts table with status badges (matched, in transit, unmatched, ambiguous, conflict, failed, skipped) and the matched bank deposit, the bank-only deposits, and CSV links. It follows the global date range and business filter. The business dashboard shows a compact Stripe card (gross, fees, net, and how many payouts are open and how many Stripe-looking deposits match no payout, linking to `/stripe`) once Stripe data exists.
+With the feature on, the business sidebar has a **Stripe** section (also in the command palette) with one page, `/stripe`: KPI cards (gross, refunds + disputes, fees and the effective fee rate, net revenue), a Stripe Capital card when there is any (per financing: principal, fee, repaid principal, fee booked, outstanding, percent repaid, and the missing-terms warning), a per-account table when there is more than one account, a monthly chart and table, the payouts table with status badges (matched, in transit, unmatched, ambiguous, conflict, failed, skipped, no bank history) and the matched bank deposit, the bank-only deposits, and CSV links. It follows the global date range and business filter. The business dashboard shows a compact Stripe card (gross, fees, net, and how many payouts are open and how many Stripe-looking deposits match no payout, linking to `/stripe`) once Stripe data exists.
 
-API (read-only): `GET /api/stripe/summary`, `GET /api/stripe/payouts`, and `GET /export/stripe/{summary,accounts,payouts,bank-only}.csv` take `start`, `end`, `business`, and `account` (default range: this year to date); `GET /api/stripe/status` takes `account` only.
+API (read-only): `GET /api/stripe/summary`, `GET /api/stripe/payouts`, and `GET /export/stripe/{summary,accounts,payouts,bank-only}.csv` take `start`, `end`, `business`, and `account` (default range: this year to date); `GET /api/stripe/capital` takes `business` and `account`; `GET /api/stripe/status` takes `account` only.
 
 ## Privacy
 
@@ -140,4 +226,4 @@ bin/hpbooks stripe sync --from 2026-09-01 --to 2026-09-30
 
 ## Tests
 
-`tests/test_stripe.py` uses synthetic results from `tests/stripe_fake.py` (`acct_TEST…`, `txn_TEST…`, `po_TEST…` ids, round amounts) and never touches the network; the direct-API test drives a fake `urlopen`. The test config lists two Stripe accounts with the feature off, so the rest of the suite runs with Stripe off; the Stripe tests turn it on with `override(stripe_enabled=True)`.
+`tests/test_stripe.py`, `tests/test_stripe_capital.py`, and `tests/test_stripe_backfill.py` use synthetic results from `tests/stripe_fake.py` (`acct_TEST…`, `txn_TEST…`, `po_TEST…`, `flxln_TEST…` ids, round amounts) and never touches the network; the direct-API test drives a fake `urlopen`. The test config lists two Stripe accounts with the feature off, so the rest of the suite runs with Stripe off; the Stripe tests turn it on with `override(stripe_enabled=True)`.

@@ -1,5 +1,5 @@
 import type { RawSiteConfig } from "../lib/siteConfig";
-import type { StripeBankDeposit, StripeFigures, StripePayouts, StripeSummary } from "../api/types";
+import type { StripeBankDeposit, StripeCapital, StripeFigures, StripePayouts, StripeSummary } from "../api/types";
 import { siteConfig } from "./fixtures";
 
 // Synthetic Stripe data only: made-up ids and round amounts.
@@ -23,6 +23,72 @@ const figures = (gross: number, refunds: number, disputes: number, fees: number,
   payouts_cents: payouts,
 });
 
+/** A $20,000 Capital loan with a $2,000 fee, $9,090.91 of principal repaid. */
+export const stripeCapital: StripeCapital = {
+  financings: [
+    {
+      account: "main",
+      account_label: "Stripe",
+      business: "general",
+      key: "flxln_TEST0001",
+      financing: "flxln_TEST0001",
+      financing_ids: ["flxln_TEST0001"],
+      label: "Capital loan 2026",
+      terms: true,
+      principal_cents: 2000000,
+      fee_cents: 200000,
+      fee_rate: null,
+      proceeds_cents: 2000000,
+      opening_principal_cents: null,
+      paid_cents: 1000000,
+      repaid_principal_cents: 909091,
+      fee_booked_cents: 90909,
+      fee_remaining_cents: 109091,
+      principal_outstanding_cents: 1090909,
+      pct_repaid: 45.5,
+      loan_account_id: "stripe-main-capital",
+      unsplit_cents: 0,
+      first_date: "2026-03-02",
+      last_date: "2026-09-12",
+      warnings: [],
+    },
+  ],
+  loans: [
+    { account: "main", account_label: "Stripe", business: "general", loan_account_id: "stripe-main-capital", loan_balance_cents: 1090909, expected_cents: 1090909, conflicts: [] },
+  ],
+  warnings: [],
+  missing_terms: false,
+  missing_terms_message: null,
+  unsplit_cents: 0,
+};
+
+/** Repayments with no [[stripe.capital]] terms: booked whole as transfers. */
+export const stripeCapitalNoTerms: StripeCapital = {
+  financings: [
+    {
+      ...stripeCapital.financings[0],
+      key: "unsplit:flxln_TEST0001",
+      label: "flxln_TEST0001",
+      terms: false,
+      principal_cents: null,
+      fee_cents: null,
+      proceeds_cents: 0,
+      repaid_principal_cents: null,
+      fee_booked_cents: 0,
+      fee_remaining_cents: null,
+      principal_outstanding_cents: null,
+      pct_repaid: null,
+      unsplit_cents: 300000,
+      warnings: ["Capital fee not split: add [[stripe.capital]] terms ($3,000.00 of repayments booked as transfers in full)"],
+    },
+  ],
+  loans: [],
+  warnings: ["Stripe, flxln_TEST0001: Capital fee not split: add [[stripe.capital]] terms"],
+  missing_terms: true,
+  missing_terms_message: "Capital fee not split: add [[stripe.capital]] terms",
+  unsplit_cents: 300000,
+};
+
 export const stripeSummary: StripeSummary = {
   ok: true,
   ready: true,
@@ -37,9 +103,10 @@ export const stripeSummary: StripeSummary = {
     { month: "2026-08", ...figures(10000, 0, 0, 400, 10000) },
     { month: "2026-09", ...figures(20000, 5000, 0, 800, 10000, { repay: 1000, proceeds: 0 }) },
   ],
-  payouts: { matched: 1, in_transit: 1, unmatched: 1, ambiguous: 0, conflict: 0, failed: 0, skipped: 0 },
+  payouts: { matched: 1, in_transit: 1, unmatched: 1, ambiguous: 0, conflict: 0, failed: 0, skipped: 0, no_bank_history: 1 },
   open_payouts: 1,
   bank_only: 1,
+  capital: stripeCapital,
 };
 
 export const stripeNotReady: StripeSummary = {
@@ -51,7 +118,7 @@ export const stripeNotReady: StripeSummary = {
   accounts: [],
   totals: figures(0, 0, 0, 0, 0),
   months: [],
-  payouts: { matched: 0, in_transit: 0, unmatched: 0, ambiguous: 0, conflict: 0, failed: 0, skipped: 0 },
+  payouts: { matched: 0, in_transit: 0, unmatched: 0, ambiguous: 0, conflict: 0, failed: 0, skipped: 0, no_bank_history: 0 },
   open_payouts: 0,
   bank_only: 0,
 };
@@ -76,6 +143,7 @@ const byStatus = (matched: [number, number], inTransit: [number, number], unmatc
   conflict: { count: 0, amount_cents: 0 },
   failed: { count: 0, amount_cents: 0 },
   skipped: { count: 0, amount_cents: 0 },
+  no_bank_history: { count: 1, amount_cents: 4000 },
 });
 
 export const stripePayouts: StripePayouts = {
@@ -123,11 +191,24 @@ export const stripePayouts: StripePayouts = {
       match_note: "no bank deposit of $50.00 within 3 days",
       bank: null,
     },
+    {
+      account: "main",
+      account_label: "Stripe",
+      id: "po_TEST0004",
+      amount_cents: 4000,
+      currency: "usd",
+      created: "2026-01-05",
+      arrival_date: "2026-01-07",
+      stripe_status: "paid",
+      match_status: "no_bank_history",
+      match_note: "arrived 2026-01-07, before the imported bank history of the business bank accounts (starts 2026-02-01)",
+      bank: null,
+    },
   ],
   bank_only: [deposit("txn_TEST0009", "2026-07-15", 2500)],
   totals: {
-    count: 3,
-    amount_cents: 20000,
+    count: 4,
+    amount_cents: 24000,
     by_status: byStatus([1, 10000], [1, 5000], [1, 5000]),
     bank_only_count: 1,
     bank_only_cents: 2500,
